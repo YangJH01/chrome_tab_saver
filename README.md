@@ -103,6 +103,20 @@ npm test
 4. `압축해제된 확장 프로그램을 로드합니다`를 클릭합니다.
 5. 이 프로젝트의 `dist/` 폴더를 선택합니다.
 
+## Release ZIP
+
+빌드 없이 바로 쓰게 하려면 GitHub `Releases`에 올라간 ZIP을 받으면 됩니다.
+
+1. 저장소의 `Releases` 페이지에서 최신 ZIP을 다운로드합니다.
+2. ZIP을 압축 해제합니다.
+3. 압축을 푼 폴더 안에서 `manifest.json`이 바로 보이는지 확인합니다.
+4. `chrome://extensions`에서 `압축해제된 확장 프로그램을 로드합니다`로 그 폴더를 선택합니다.
+
+이 저장소에는 GitHub Actions 릴리스 워크플로가 포함되어 있습니다.
+
+- 추천: `Actions > Release Extension`에서 수동 실행
+- 필요하면 `v0.1.0` 같은 버전 태그를 올려 자동 릴리스도 가능
+
 ## Usage
 
 ### Save tabs
@@ -192,6 +206,19 @@ npm run build
 ```bash
 node scripts/generate-icons.mjs
 ```
+
+릴리스를 수동으로 만들고 싶다면 GitHub 웹 UI에서:
+
+1. `Actions`
+2. `Release Extension`
+3. `Run workflow`
+4. 브랜치는 `main` 선택
+5. 버전 입력 예: `0.1.0`
+6. 실행 후 완료되면 `Releases`에 ZIP이 올라옵니다.
+
+대부분은 위 방식만 쓰면 됩니다.
+
+`태그 푸시`는 `v0.1.0`처럼 버전 이름을 Git에 붙여 올리는 고급 방식입니다. 나중에 버전 관리까지 자동화하고 싶을 때 쓰는 옵션이고, 지금은 몰라도 전혀 문제 없습니다.
 
 ## Current Status
 
