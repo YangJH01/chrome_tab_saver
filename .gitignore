@@ -1,6 +1,7 @@
 node_modules/
 dist/
 .omx/
+tasks/
 
 private/screenshots/*
 !private/screenshots/.gitkeep
