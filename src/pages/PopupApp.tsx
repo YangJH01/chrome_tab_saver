@@ -150,7 +150,7 @@ export function PopupApp() {
         const cleanupPlan = createAfterSaveCleanupPlan(tabs);
 
         if (cleanupPlan.placeholderWindowId !== null) {
-          await chrome.tabs.create({ active: true, windowId: cleanupPlan.placeholderWindowId });
+          await chrome.tabs.create({ active: false, windowId: cleanupPlan.placeholderWindowId });
         }
 
         if (cleanupPlan.tabIdsToClose.length > 0) {
