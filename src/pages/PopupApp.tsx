@@ -257,6 +257,32 @@ export function PopupApp() {
     }
   }
 
+  async function handleOpenTabBesideCurrent(url: string, folderId: string) {
+    setBusyFolderId(folderId);
+    setFeedback(null);
+    setError(null);
+
+    try {
+      const [activeTab] = await chrome.tabs.query({ active: true, currentWindow: true });
+
+      if (typeof activeTab?.windowId === "number" && typeof activeTab.index === "number") {
+        await chrome.tabs.create({
+          url,
+          active: false,
+          windowId: activeTab.windowId,
+          index: activeTab.index + 1
+        });
+      } else {
+        await chrome.tabs.create({ url });
+      }
+    } catch (caughtError) {
+      console.error(caughtError);
+      setError(messages.openInCurrentFailed);
+    } finally {
+      setBusyFolderId(null);
+    }
+  }
+
   const visibleFolders = getVisibleFolders(folders, visibleCount);
   const hasMore = visibleCount < folders.length;
 
@@ -348,7 +374,20 @@ export function PopupApp() {
                         <div className="tab-content">
                           <button
                             className="tab-link-button"
-                            onClick={() => void handleOpenTabInCurrent(tab.url, folder.id)}
+                            onClick={(event) => {
+                              if (event.ctrlKey || event.metaKey) {
+                                event.preventDefault();
+                                void handleOpenTabBesideCurrent(tab.url, folder.id);
+                                return;
+                              }
+
+                              void handleOpenTabInCurrent(tab.url, folder.id);
+                            }}
+                            onAuxClick={(event) => {
+                              if (event.button !== 1) return;
+                              event.preventDefault();
+                              void handleOpenTabBesideCurrent(tab.url, folder.id);
+                            }}
                             disabled={busyFolderId === folder.id}
                             title={tab.title}
                           >
