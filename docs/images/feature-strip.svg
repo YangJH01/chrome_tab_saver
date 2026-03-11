@@ -1,0 +1,37 @@
+<svg width="1280" height="336" viewBox="0 0 1280 336" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="1280" height="336" rx="28" fill="#0F172A"/>
+
+  <g transform="translate(40 44)">
+    <rect width="372" height="248" rx="26" fill="#111827"/>
+    <circle cx="56" cy="56" r="20" fill="#2563EB"/>
+    <rect x="49" y="36" width="14" height="22" rx="7" fill="#E0F2FE"/>
+    <path d="M56 78L42 56H70L56 78Z" fill="#E0F2FE"/>
+    <text x="88" y="60" fill="#FFFFFF" font-size="28" font-family="Arial, Helvetica, sans-serif" font-weight="700" dominant-baseline="middle">Session Capture</text>
+    <text x="40" y="124" fill="#CBD5E1" font-size="20" font-family="Arial, Helvetica, sans-serif">Save the current window in one action.</text>
+    <text x="40" y="156" fill="#CBD5E1" font-size="20" font-family="Arial, Helvetica, sans-serif">Duplicate URLs and non-restorable</text>
+    <text x="40" y="188" fill="#CBD5E1" font-size="20" font-family="Arial, Helvetica, sans-serif">tabs are filtered before storing.</text>
+  </g>
+
+  <g transform="translate(454 44)">
+    <rect width="372" height="248" rx="26" fill="#111827"/>
+    <circle cx="56" cy="56" r="20" fill="#14B8A6"/>
+    <rect x="40" y="40" width="32" height="32" rx="10" fill="#CCFBF1"/>
+    <rect x="50" y="50" width="12" height="12" rx="6" fill="#14B8A6"/>
+    <text x="88" y="60" fill="#FFFFFF" font-size="28" font-family="Arial, Helvetica, sans-serif" font-weight="700" dominant-baseline="middle">Restore Control</text>
+    <text x="40" y="124" fill="#CBD5E1" font-size="20" font-family="Arial, Helvetica, sans-serif">Use a global restore default, then</text>
+    <text x="40" y="156" fill="#CBD5E1" font-size="20" font-family="Arial, Helvetica, sans-serif">override it per session in the manager.</text>
+    <text x="40" y="188" fill="#CBD5E1" font-size="20" font-family="Arial, Helvetica, sans-serif">Fast in popup, precise in library view.</text>
+  </g>
+
+  <g transform="translate(868 44)">
+    <rect width="372" height="248" rx="26" fill="#111827"/>
+    <circle cx="56" cy="56" r="20" fill="#7C3AED"/>
+    <rect x="42" y="42" width="28" height="28" rx="8" fill="#EDE9FE"/>
+    <path d="M56 48V64" stroke="#7C3AED" stroke-width="4" stroke-linecap="round"/>
+    <path d="M48 56H64" stroke="#7C3AED" stroke-width="4" stroke-linecap="round"/>
+    <text x="88" y="60" fill="#FFFFFF" font-size="28" font-family="Arial, Helvetica, sans-serif" font-weight="700" dominant-baseline="middle">Global Settings</text>
+    <text x="40" y="124" fill="#CBD5E1" font-size="20" font-family="Arial, Helvetica, sans-serif">Switch language, theme, restore defaults,</text>
+    <text x="40" y="156" fill="#CBD5E1" font-size="20" font-family="Arial, Helvetica, sans-serif">and after-save behavior in one place.</text>
+    <text x="40" y="188" fill="#CBD5E1" font-size="20" font-family="Arial, Helvetica, sans-serif">Built for daily repeat tab workflows.</text>
+  </g>
+</svg>

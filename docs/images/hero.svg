@@ -1,0 +1,69 @@
+<svg width="1280" height="640" viewBox="0 0 1280 640" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="120" y1="64" x2="1140" y2="576" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#EFF6FF"/>
+      <stop offset="1" stop-color="#DBEAFE"/>
+    </linearGradient>
+    <linearGradient id="panel" x1="760" y1="104" x2="1120" y2="520" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#2563EB"/>
+      <stop offset="1" stop-color="#1D4ED8"/>
+    </linearGradient>
+    <linearGradient id="surface" x1="0" y1="0" x2="1" y2="1">
+      <stop stop-color="#FFFFFF" stop-opacity="0.98"/>
+      <stop offset="1" stop-color="#F8FAFC" stop-opacity="0.96"/>
+    </linearGradient>
+    <filter id="shadow" x="8" y="20" width="1264" height="604" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+      <feDropShadow dx="0" dy="20" stdDeviation="28" flood-color="#0F172A" flood-opacity="0.14"/>
+    </filter>
+  </defs>
+
+  <rect width="1280" height="640" rx="36" fill="url(#bg)"/>
+  <circle cx="1110" cy="104" r="170" fill="#BFDBFE" fill-opacity="0.5"/>
+  <circle cx="126" cy="572" r="162" fill="#CCFBF1" fill-opacity="0.56"/>
+
+  <g filter="url(#shadow)">
+    <rect x="60" y="72" width="1160" height="496" rx="36" fill="url(#surface)"/>
+  </g>
+
+  <g transform="translate(96 118)">
+    <rect width="198" height="38" rx="19" fill="#DBEAFE"/>
+    <text x="99" y="20" fill="#1D4ED8" font-size="17" font-family="Arial, Helvetica, sans-serif" font-weight="700" text-anchor="middle" dominant-baseline="middle">CHROME EXTENSION</text>
+  </g>
+
+  <text x="96" y="238" fill="#0F172A" font-size="78" font-family="Arial, Helvetica, sans-serif" font-weight="700">Tab Save</text>
+  <text x="96" y="292" fill="#334155" font-size="27" font-family="Arial, Helvetica, sans-serif">Save the current window as a reusable tab session.</text>
+  <text x="96" y="332" fill="#334155" font-size="27" font-family="Arial, Helvetica, sans-serif">Restore it later with cleaner defaults, themes,</text>
+  <text x="96" y="368" fill="#334155" font-size="27" font-family="Arial, Helvetica, sans-serif">and language settings.</text>
+
+  <g transform="translate(96 398)">
+    <rect width="170" height="64" rx="20" fill="#0F172A"/>
+    <text x="85" y="34" fill="#FFFFFF" font-size="23" font-family="Arial, Helvetica, sans-serif" font-weight="700" text-anchor="middle" dominant-baseline="middle">Manifest V3</text>
+
+    <rect x="188" width="170" height="64" rx="20" fill="#FFFFFF"/>
+    <text x="273" y="34" fill="#2563EB" font-size="23" font-family="Arial, Helvetica, sans-serif" font-weight="700" text-anchor="middle" dominant-baseline="middle">Bilingual UI</text>
+
+    <rect x="376" width="170" height="64" rx="20" fill="#FFFFFF"/>
+    <text x="461" y="34" fill="#0F766E" font-size="23" font-family="Arial, Helvetica, sans-serif" font-weight="700" text-anchor="middle" dominant-baseline="middle">Theme Aware</text>
+  </g>
+
+  <g transform="translate(742 104)">
+    <rect width="410" height="416" rx="34" fill="url(#panel)"/>
+    <circle cx="328" cy="326" r="70" fill="#1E3A8A" fill-opacity="0.28"/>
+    <circle cx="96" cy="84" r="74" fill="#93C5FD" fill-opacity="0.22"/>
+
+    <rect x="84" y="76" width="198" height="118" rx="24" fill="#FFFFFF" fill-opacity="0.18"/>
+    <rect x="70" y="108" width="214" height="132" rx="28" fill="#FFFFFF" fill-opacity="0.28"/>
+    <rect x="56" y="144" width="232" height="158" rx="30" fill="#FFFFFF"/>
+
+    <rect x="80" y="164" width="184" height="18" rx="9" fill="#2563EB"/>
+    <rect x="80" y="198" width="150" height="14" rx="7" fill="#DBEAFE"/>
+    <rect x="80" y="222" width="122" height="14" rx="7" fill="#DBEAFE"/>
+
+    <rect x="124" y="252" width="82" height="56" rx="20" fill="#E0F2FE"/>
+    <rect x="154" y="216" width="22" height="56" rx="11" fill="#2563EB"/>
+    <path d="M165 302L129 258H201L165 302Z" fill="#2563EB"/>
+
+    <rect x="64" y="336" width="282" height="46" rx="23" fill="#FFFFFF" fill-opacity="0.16"/>
+    <text x="205" y="360" fill="#EFF6FF" font-size="17" font-family="Arial, Helvetica, sans-serif" font-weight="700" text-anchor="middle" dominant-baseline="middle">Capture, restore, reset workspace</text>
+  </g>
+</svg>
