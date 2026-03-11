@@ -531,8 +531,8 @@ button svg {
 
 .undo-countdown-progress {
   stroke: var(--brand-primary);
-  stroke-linecap: round;
-  stroke-dasharray: var(--undo-circumference);
+  stroke-linecap: butt;
+  stroke-dasharray: 100;
   stroke-dashoffset: 0;
   animation: undo-countdown linear forwards;
   animation-duration: var(--undo-duration);
@@ -544,7 +544,7 @@ button svg {
   }
 
   to {
-    stroke-dashoffset: var(--undo-circumference);
+    stroke-dashoffset: -100;
   }
 }
 
