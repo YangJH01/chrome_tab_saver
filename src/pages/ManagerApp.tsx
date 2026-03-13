@@ -141,6 +141,8 @@ export function ManagerApp() {
   const pickerFolder = pickerFolderId ? favoriteFolders.find((folder) => folder.id === pickerFolderId) ?? null : null;
   const selectedCount = selectedTabKeys.length;
   const selectableCount = pickerTabs.filter((candidate) => candidate.selectable).length;
+  const selectableTabKeys = pickerTabs.filter((candidate) => candidate.selectable).map((candidate) => candidate.key);
+  const hasSelectedTabs = selectedTabKeys.length > 0;
 
   useEffect(() => {
     setDraftNames((currentDraftNames) => {
@@ -767,7 +769,16 @@ export function ManagerApp() {
 
             <div className="selection-summary">
               <p className="manager-section-copy">{messages.addTabsDialogDescription}</p>
-              <span className="pill">{messages.selectedTabsCount(selectedCount, selectableCount)}</span>
+              <div className="selection-summary-actions">
+                <span className="pill">{messages.selectedTabsCount(selectedCount, selectableCount)}</span>
+                <button
+                  className="ghost-button compact-action-button"
+                  onClick={() => setSelectedTabKeys(hasSelectedTabs ? [] : selectableTabKeys)}
+                  disabled={pickerBusy || pickerLoading || selectableCount === 0}
+                >
+                  {hasSelectedTabs ? messages.clearSelectedTabs : messages.selectAllTabs}
+                </button>
+              </div>
             </div>
 
             {pickerLoading ? <p className="empty-state">{messages.loading}</p> : null}
@@ -791,6 +802,11 @@ export function ManagerApp() {
                             checked ? currentKeys.filter((key) => key !== candidate.key) : [...currentKeys, candidate.key]
                           ))}
                         />
+                        {candidate.tab.favIconUrl ? (
+                          <img className="favicon selection-favicon" src={candidate.tab.favIconUrl} alt="" />
+                        ) : (
+                          <div className="favicon favicon-fallback selection-favicon" />
+                        )}
                         <div className="selection-copy">
                           <strong title={title}>{title}</strong>
                           <span title={subtitle}>{subtitle}</span>

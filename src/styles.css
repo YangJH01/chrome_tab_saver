@@ -751,6 +751,12 @@ button svg {
   gap: 12px;
 }
 
+.selection-summary-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
 .selection-list {
   display: grid;
   gap: 8px;
@@ -760,9 +766,9 @@ button svg {
 
 .selection-item {
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto;
+  grid-template-columns: 16px 16px minmax(0, 1fr) auto;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-md);
   background: var(--bg-subtle);
@@ -776,7 +782,14 @@ button svg {
 .selection-item input {
   width: 16px;
   height: 16px;
+  margin: 0;
   accent-color: var(--brand-primary);
+}
+
+.selection-favicon {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
 }
 
 .selection-copy {
@@ -794,6 +807,7 @@ button svg {
 
 .selection-copy strong {
   font-size: 0.88rem;
+  line-height: 1.35;
 }
 
 .selection-copy span,
@@ -803,7 +817,9 @@ button svg {
 }
 
 .selection-item em {
+  justify-self: end;
   font-style: normal;
+  white-space: nowrap;
 }
 
 .folder-inline-empty {
@@ -958,6 +974,12 @@ button svg {
   .theme-toggle-row,
   .selection-summary {
     grid-template-columns: 1fr;
+  }
+
+  .selection-summary,
+  .selection-summary-actions {
+    flex-direction: column;
+    align-items: stretch;
   }
 
   .manager-section-heading {

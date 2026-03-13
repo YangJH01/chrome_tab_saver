@@ -110,6 +110,8 @@ type TranslationDictionary = {
   nonRestorableTab: string;
   nonRestorableBadge: string;
   addSelectedTabs: string;
+  selectAllTabs: string;
+  clearSelectedTabs: string;
   favoriteTabsSaveFailed: string;
   favoriteFolderUnavailable: string;
   selectTabsToAdd: string;
@@ -234,6 +236,8 @@ const translations: Record<LanguageCode, TranslationDictionary> = {
     nonRestorableTab: "저장할 수 없는 탭",
     nonRestorableBadge: "저장 불가",
     addSelectedTabs: "선택한 탭 추가",
+    selectAllTabs: "전체 선택",
+    clearSelectedTabs: "선택 해제",
     favoriteTabsSaveFailed: "즐겨찾기 폴더에 탭을 추가하지 못했습니다.",
     favoriteFolderUnavailable: "선택한 즐겨찾기 폴더를 찾을 수 없습니다.",
     selectTabsToAdd: "추가할 탭을 하나 이상 선택하세요.",
@@ -370,6 +374,8 @@ const translations: Record<LanguageCode, TranslationDictionary> = {
     nonRestorableTab: "This tab cannot be saved",
     nonRestorableBadge: "Unavailable",
     addSelectedTabs: "Add selected tabs",
+    selectAllTabs: "Select all",
+    clearSelectedTabs: "Clear selection",
     favoriteTabsSaveFailed: "Failed to add tabs to the favorite folder.",
     favoriteFolderUnavailable: "The selected favorite folder is no longer available.",
     selectTabsToAdd: "Select at least one tab to add.",
