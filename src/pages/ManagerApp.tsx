@@ -625,7 +625,7 @@ export function ManagerApp() {
                     <span>{messages.addTabs}</span>
                   </button>
                   <button
-                    className="primary-button"
+                    className="primary-button restore-action-button"
                     onClick={() => void handleRestore(folder, settings.defaultRestoreMode)}
                     disabled={isBusy || folder.tabs.length === 0}
                   >
@@ -737,7 +737,7 @@ export function ManagerApp() {
 
                 <div className="card-actions">
                   <button
-                    className="primary-button"
+                    className="primary-button restore-action-button"
                     onClick={() => void handleRestore(folder, restoreModes[folder.id] ?? settings.defaultRestoreMode)}
                     disabled={isBusy}
                   >

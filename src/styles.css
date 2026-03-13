@@ -263,6 +263,14 @@ button svg {
   background: var(--brand-hover);
 }
 
+.restore-action-button {
+  background: color-mix(in srgb, var(--brand-primary) 78%, #0f172a 22%);
+}
+
+.restore-action-button:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--brand-hover) 72%, #0f172a 28%);
+}
+
 .secondary-button {
   background: var(--brand-soft);
   color: var(--brand-primary);
