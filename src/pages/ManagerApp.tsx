@@ -10,6 +10,7 @@ import {
   getThemeLabel
 } from "../lib/i18n";
 import { type RestoreMode, restoreFolderTabs } from "../lib/restore";
+import { cleanupTabsInCurrentWindow } from "../lib/tabCleanup";
 import {
   addTabsToFavoriteFolder,
   createFavoriteFolder,
@@ -416,6 +417,13 @@ export function ManagerApp() {
     try {
       const result = await addTabsToFavoriteFolder(folderId, tabs, { overwriteDuplicates });
 
+      if (settings.favoriteTabsBehavior === "close-tabs") {
+        await cleanupTabsInCurrentWindow(
+          pickerTabs.map((candidate) => candidate.tab),
+          tabs
+        );
+      }
+
       await refresh();
       closePicker();
       setFeedback(buildFavoriteAddFeedback(result, messages));
@@ -502,6 +510,18 @@ export function ManagerApp() {
     } catch (caughtError) {
       console.error(caughtError);
       setError(messages.saveTabsBehaviorFailed);
+    }
+  }
+
+  async function handleFavoriteTabsBehaviorChange(favoriteTabsBehavior: SaveTabsBehavior) {
+    setFeedback(null);
+    setError(null);
+    try {
+      await update({ favoriteTabsBehavior });
+      setFeedback(messages.favoriteTabsBehaviorSaved(getSaveTabsBehaviorLabel(favoriteTabsBehavior, settings.language)));
+    } catch (caughtError) {
+      console.error(caughtError);
+      setError(messages.favoriteTabsBehaviorFailed);
     }
   }
 
@@ -1001,6 +1021,35 @@ export function ManagerApp() {
                     <span>{messages.saveTabsClose}</span>
                   </span>
                   <small>{messages.saveTabsCloseDescription}</small>
+                </button>
+              </div>
+            </section>
+
+            <section className="settings-section">
+              <div className="settings-copy">
+                <strong>{messages.favoriteTabsBehaviorTitle}</strong>
+                <p>{messages.favoriteTabsBehaviorDescription}</p>
+              </div>
+              <div className="settings-choice-grid">
+                <button
+                  className={`setting-choice ${settings.favoriteTabsBehavior === "keep-tabs" ? "is-active" : ""}`}
+                  onClick={() => void handleFavoriteTabsBehaviorChange("keep-tabs")}
+                >
+                  <span className="setting-choice-title">
+                    <StackIcon />
+                    <span>{messages.saveTabsKeep}</span>
+                  </span>
+                  <small>{messages.favoriteTabsKeepDescription}</small>
+                </button>
+                <button
+                  className={`setting-choice ${settings.favoriteTabsBehavior === "close-tabs" ? "is-active" : ""}`}
+                  onClick={() => void handleFavoriteTabsBehaviorChange("close-tabs")}
+                >
+                  <span className="setting-choice-title">
+                    <StackIcon />
+                    <span>{messages.saveTabsClose}</span>
+                  </span>
+                  <small>{messages.favoriteTabsCloseDescription}</small>
                 </button>
               </div>
             </section>

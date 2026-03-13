@@ -31,13 +31,19 @@ function createMemoryStorage(seedSettings?: AppSettings): StorageAreaLike {
 describe("settings helpers", () => {
   it("falls back to defaults when settings are missing or invalid", () => {
     expect(normalizeSettings(undefined)).toEqual(DEFAULT_APP_SETTINGS);
-    expect(normalizeSettings({ defaultRestoreMode: "wrong", saveTabsBehavior: "archive", theme: "sepia" })).toEqual(DEFAULT_APP_SETTINGS);
+    expect(normalizeSettings({
+      defaultRestoreMode: "wrong",
+      favoriteTabsBehavior: "archive",
+      saveTabsBehavior: "archive",
+      theme: "sepia"
+    })).toEqual(DEFAULT_APP_SETTINGS);
   });
 
   it("reads stored settings", async () => {
     const settings = await getSettings(
       createMemoryStorage({
         defaultRestoreMode: "current-tab",
+        favoriteTabsBehavior: "close-tabs",
         language: "en",
         saveTabsBehavior: "close-tabs",
         theme: "dark"
@@ -46,6 +52,7 @@ describe("settings helpers", () => {
 
     expect(settings).toEqual({
       defaultRestoreMode: "current-tab",
+      favoriteTabsBehavior: "close-tabs",
       language: "en",
       saveTabsBehavior: "close-tabs",
       theme: "dark"
@@ -55,15 +62,17 @@ describe("settings helpers", () => {
   it("merges partial updates with existing settings", async () => {
     const storage = createMemoryStorage({
       defaultRestoreMode: "current-tab",
+      favoriteTabsBehavior: "keep-tabs",
       language: "ko",
       saveTabsBehavior: "keep-tabs",
       theme: "light"
     });
 
-    const settings = await saveSettings({ saveTabsBehavior: "close-tabs", theme: "dark" }, storage);
+    const settings = await saveSettings({ favoriteTabsBehavior: "close-tabs", saveTabsBehavior: "close-tabs", theme: "dark" }, storage);
 
     expect(settings).toEqual({
       defaultRestoreMode: "current-tab",
+      favoriteTabsBehavior: "close-tabs",
       language: "ko",
       saveTabsBehavior: "close-tabs",
       theme: "dark"

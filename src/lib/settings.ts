@@ -9,6 +9,7 @@ export type SaveTabsBehavior = "keep-tabs" | "close-tabs";
 
 export type AppSettings = {
   defaultRestoreMode: RestoreMode;
+  favoriteTabsBehavior: SaveTabsBehavior;
   language: LanguageCode;
   saveTabsBehavior: SaveTabsBehavior;
   theme: ThemeMode;
@@ -16,6 +17,7 @@ export type AppSettings = {
 
 export const DEFAULT_APP_SETTINGS: AppSettings = {
   defaultRestoreMode: DEFAULT_RESTORE_MODE,
+  favoriteTabsBehavior: "keep-tabs",
   language: "ko",
   saveTabsBehavior: "keep-tabs",
   theme: "system"
@@ -52,6 +54,9 @@ export function normalizeSettings(value: unknown): AppSettings {
     defaultRestoreMode: isRestoreMode(candidate.defaultRestoreMode)
       ? candidate.defaultRestoreMode
       : DEFAULT_APP_SETTINGS.defaultRestoreMode,
+    favoriteTabsBehavior: isSaveTabsBehavior(candidate.favoriteTabsBehavior)
+      ? candidate.favoriteTabsBehavior
+      : DEFAULT_APP_SETTINGS.favoriteTabsBehavior,
     language: isLanguageCode(candidate.language) ? candidate.language : DEFAULT_APP_SETTINGS.language,
     saveTabsBehavior: isSaveTabsBehavior(candidate.saveTabsBehavior)
       ? candidate.saveTabsBehavior

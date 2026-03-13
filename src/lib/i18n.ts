@@ -81,6 +81,12 @@ type TranslationDictionary = {
   saveTabsCloseDescription: string;
   saveTabsBehaviorSaved: (label: string) => string;
   saveTabsBehaviorFailed: string;
+  favoriteTabsBehaviorTitle: string;
+  favoriteTabsBehaviorDescription: string;
+  favoriteTabsKeepDescription: string;
+  favoriteTabsCloseDescription: string;
+  favoriteTabsBehaviorSaved: (label: string) => string;
+  favoriteTabsBehaviorFailed: string;
   settingsLoadFailed: string;
   foldersLoadFailed: string;
   favoriteFoldersKicker: string;
@@ -207,6 +213,12 @@ const translations: Record<LanguageCode, TranslationDictionary> = {
     saveTabsCloseDescription: "저장 직후 현재 탭들을 닫고 새 탭 하나만 남깁니다.",
     saveTabsBehaviorSaved: (label) => `저장 후 탭 처리가 ${label}로 설정되었습니다.`,
     saveTabsBehaviorFailed: "저장 후 탭 처리 설정을 저장하지 못했습니다.",
+    favoriteTabsBehaviorTitle: "즐겨찾기 탭 추가 후 처리",
+    favoriteTabsBehaviorDescription: "즐겨찾기 폴더에 선택한 탭을 추가한 뒤 현재 창의 선택 탭을 그대로 둘지, 닫아 정리할지 정합니다.",
+    favoriteTabsKeepDescription: "선택해서 추가한 탭을 현재 창에 그대로 둡니다.",
+    favoriteTabsCloseDescription: "선택해서 추가한 탭만 현재 창에서 닫습니다.",
+    favoriteTabsBehaviorSaved: (label) => `즐겨찾기 탭 추가 후 처리가 ${label}로 설정되었습니다.`,
+    favoriteTabsBehaviorFailed: "즐겨찾기 탭 추가 후 처리 설정을 저장하지 못했습니다.",
     settingsLoadFailed: "전역 설정을 불러오지 못했습니다.",
     foldersLoadFailed: "저장된 탭 폴더를 불러오지 못했습니다.",
     favoriteFoldersKicker: "Favorite Folders",
@@ -345,6 +357,12 @@ const translations: Record<LanguageCode, TranslationDictionary> = {
     saveTabsCloseDescription: "Close the current window tabs after saving and leave one fresh tab open.",
     saveTabsBehaviorSaved: (label) => `After-save tab behavior saved as ${label}.`,
     saveTabsBehaviorFailed: "Failed to save the after-save tab behavior.",
+    favoriteTabsBehaviorTitle: "After adding favorite tabs",
+    favoriteTabsBehaviorDescription: "Choose whether tabs added to a favorite folder stay in the current window or get closed right away.",
+    favoriteTabsKeepDescription: "Keep the tabs you just added in the current window.",
+    favoriteTabsCloseDescription: "Close only the tabs you just added from the current window.",
+    favoriteTabsBehaviorSaved: (label) => `Favorite tab behavior saved as ${label}.`,
+    favoriteTabsBehaviorFailed: "Failed to save the favorite tab behavior.",
     settingsLoadFailed: "Failed to load global settings.",
     foldersLoadFailed: "Failed to load saved tab folders.",
     favoriteFoldersKicker: "Favorite Folders",
