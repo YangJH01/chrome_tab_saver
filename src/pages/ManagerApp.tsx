@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { type KeyboardEvent, useEffect, useRef, useState } from "react";
 
 import { UndoCountdownRing } from "../components/UndoCountdownRing";
 import {
@@ -464,6 +464,23 @@ export function ManagerApp() {
     }
   }
 
+  function handleCreateFavoriteKeyDown(event: KeyboardEvent<HTMLInputElement>) {
+    if (event.nativeEvent.isComposing) {
+      return;
+    }
+
+    if (event.key === "Escape") {
+      event.preventDefault();
+      closeCreateFavorite();
+      return;
+    }
+
+    if (event.key === "Enter" && busyFolderId !== "create-favorite") {
+      event.preventDefault();
+      void handleCreateFavorite();
+    }
+  }
+
   return (
     <main className="manager-shell">
       <header className="manager-header">
@@ -715,6 +732,7 @@ export function ManagerApp() {
                 className="text-input"
                 value={newFavoriteName}
                 onChange={(event) => setNewFavoriteName(event.target.value)}
+                onKeyDown={handleCreateFavoriteKeyDown}
                 placeholder={messages.favoriteFolderNamePlaceholder}
               />
             </div>
