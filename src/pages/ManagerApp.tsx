@@ -13,6 +13,7 @@ import { type RestoreMode, restoreFolderTabs } from "../lib/restore";
 import {
   addTabsToFavoriteFolder,
   createFavoriteFolder,
+  deleteTabFromFolder,
   deleteFolder,
   formatStoredTimestamp,
   isFavoriteFolder,
@@ -117,7 +118,7 @@ export function ManagerApp() {
   const favoriteFolders = folders.filter(isFavoriteFolder);
   const [draftNames, setDraftNames] = useState<Record<string, string>>({});
   const [restoreModes, setRestoreModes] = useState<Record<string, RestoreMode>>({});
-  const [expandedFolderId, setExpandedFolderId] = useState<string | null>(null);
+  const [expandedFolderIds, setExpandedFolderIds] = useState<string[]>([]);
   const [busyFolderId, setBusyFolderId] = useState<string | null>(null);
   const [feedback, setFeedback] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -191,9 +192,7 @@ export function ManagerApp() {
   }, [folders, settings.defaultRestoreMode]);
 
   useEffect(() => {
-    setExpandedFolderId((currentFolderId) => (
-      currentFolderId && folders.some((folder) => folder.id === currentFolderId) ? currentFolderId : null
-    ));
+    setExpandedFolderIds((currentFolderIds) => currentFolderIds.filter((folderId) => folders.some((folder) => folder.id === folderId)));
   }, [folders]);
 
   useEffect(() => {
@@ -307,6 +306,46 @@ export function ManagerApp() {
         setBusyFolderId(null);
       }
     });
+  }
+
+  async function handleDeleteTab(folder: TabFolder, tabId: string) {
+    const deletedTab = folder.tabs.find((tab) => tab.id === tabId);
+
+    if (!deletedTab) return;
+
+    setBusyFolderId(folder.id);
+    setFeedback(null);
+    setError(null);
+    try {
+      const nextFolders = await deleteTabFromFolder(folder.id, tabId);
+
+      await refresh();
+
+      if (!nextFolders.some((candidateFolder) => candidateFolder.id === folder.id)) {
+        setExpandedFolderIds((currentFolderIds) => currentFolderIds.filter((folderId) => folderId !== folder.id));
+        queueUndoAction(messages.deleteLastTab(folder.name), async () => {
+          await saveFolder(folder);
+        });
+        return;
+      }
+
+      queueUndoAction(messages.deleteTabSuccess(deletedTab.title), async () => {
+        await saveFolder(folder);
+      });
+    } catch (caughtError) {
+      console.error(caughtError);
+      setError(messages.deleteTabFailed);
+    } finally {
+      setBusyFolderId(null);
+    }
+  }
+
+  function toggleExpandedFolder(folderId: string) {
+    setExpandedFolderIds((currentFolderIds) => (
+      currentFolderIds.includes(folderId)
+        ? currentFolderIds.filter((currentFolderId) => currentFolderId !== folderId)
+        : [...currentFolderIds, folderId]
+    ));
   }
 
   async function handleRestore(folder: TabFolder, mode: RestoreMode) {
@@ -545,7 +584,7 @@ export function ManagerApp() {
         <section className="folder-grid">
           {favoriteFolders.map((folder) => {
             const isBusy = busyFolderId === folder.id;
-            const isExpanded = expandedFolderId === folder.id;
+            const isExpanded = expandedFolderIds.includes(folder.id);
 
             return (
               <article key={folder.id} className="panel folder-card">
@@ -592,7 +631,7 @@ export function ManagerApp() {
                   >
                     <span>{messages.restoreNow}</span>
                   </button>
-                  <button className="ghost-button" onClick={() => setExpandedFolderId(isExpanded ? null : folder.id)} aria-label={messages.managerTitle}>
+                  <button className="ghost-button" onClick={() => toggleExpandedFolder(folder.id)} aria-label={messages.managerTitle}>
                     <ListIcon />
                   </button>
                   <button className="danger-button" onClick={() => void handleDelete(folder)} disabled={isBusy} aria-label={messages.delete}>
@@ -610,6 +649,14 @@ export function ManagerApp() {
                             <strong title={tab.title}>{tab.title}</strong>
                             <a href={tab.url} target="_blank" rel="noreferrer" title={tab.url}>{tab.url}</a>
                           </div>
+                          <button
+                            className="ghost-button icon-action-button"
+                            onClick={() => void handleDeleteTab(folder, tab.id)}
+                            disabled={isBusy}
+                            aria-label={messages.removeTabAria(tab.title)}
+                          >
+                            <TrashIcon />
+                          </button>
                         </li>
                       ))}
                     </ul>
@@ -643,7 +690,7 @@ export function ManagerApp() {
         <section className="folder-grid">
           {sessionFolders.map((folder) => {
             const isBusy = busyFolderId === folder.id;
-            const isExpanded = expandedFolderId === folder.id;
+            const isExpanded = expandedFolderIds.includes(folder.id);
 
             return (
               <article key={folder.id} className="panel folder-card">
@@ -696,7 +743,7 @@ export function ManagerApp() {
                   >
                     <span>{messages.restoreNow}</span>
                   </button>
-                  <button className="ghost-button" onClick={() => setExpandedFolderId(isExpanded ? null : folder.id)} aria-label={messages.managerTitle}>
+                  <button className="ghost-button" onClick={() => toggleExpandedFolder(folder.id)} aria-label={messages.managerTitle}>
                     <ListIcon />
                   </button>
                   <button className="danger-button" onClick={() => void handleDelete(folder)} disabled={isBusy} aria-label={messages.delete}>
@@ -713,6 +760,14 @@ export function ManagerApp() {
                           <strong title={tab.title}>{tab.title}</strong>
                           <a href={tab.url} target="_blank" rel="noreferrer" title={tab.url}>{tab.url}</a>
                         </div>
+                        <button
+                          className="ghost-button icon-action-button"
+                          onClick={() => void handleDeleteTab(folder, tab.id)}
+                          disabled={isBusy}
+                          aria-label={messages.removeTabAria(tab.title)}
+                        >
+                          <TrashIcon />
+                        </button>
                       </li>
                     ))}
                   </ul>
