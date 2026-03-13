@@ -143,6 +143,11 @@ button svg {
   box-shadow: var(--shadow-sm);
 }
 
+.library-section {
+  display: grid;
+  gap: 16px;
+}
+
 .hero-panel {
   display: flex;
   flex-direction: column;
@@ -198,6 +203,23 @@ button svg {
   display: flex;
   align-items: center;
   gap: 8px;
+}
+
+.manager-section-heading {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.manager-section-title {
+  font-size: 1.15rem;
+  font-weight: 800;
+}
+
+.manager-section-copy {
+  color: var(--text-muted);
+  font-size: 0.85rem;
 }
 
 .text-input,
@@ -384,6 +406,10 @@ button svg {
 
 .card-actions .primary-button {
   width: 100%;
+}
+
+.wide-card-actions {
+  grid-template-columns: 1fr 1fr auto auto;
 }
 
 .folder-preview-list {
@@ -643,6 +669,10 @@ button svg {
   padding: 80px 24px;
 }
 
+.compact-empty-panel {
+  padding: 28px 20px;
+}
+
 .empty-state {
   color: var(--text-muted);
   text-align: center;
@@ -674,6 +704,10 @@ button svg {
   padding: 16px;
 }
 
+.form-dialog {
+  width: min(100%, 420px);
+}
+
 .confirm-title {
   color: var(--text-main);
   font-size: 0.9rem;
@@ -697,6 +731,92 @@ button svg {
   width: min(100%, 560px);
   gap: 18px;
   padding: 18px;
+}
+
+.selection-dialog {
+  display: grid;
+  width: min(100%, 640px);
+  gap: 16px;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  background: var(--bg-card);
+  box-shadow: var(--shadow-dialog);
+  padding: 18px;
+}
+
+.selection-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.selection-list {
+  display: grid;
+  gap: 8px;
+  max-height: 320px;
+  overflow-y: auto;
+}
+
+.selection-item {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  background: var(--bg-subtle);
+  padding: 12px;
+}
+
+.selection-item.is-disabled {
+  opacity: 0.7;
+}
+
+.selection-item input {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--brand-primary);
+}
+
+.selection-copy {
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+}
+
+.selection-copy strong,
+.selection-copy span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.selection-copy strong {
+  font-size: 0.88rem;
+}
+
+.selection-copy span,
+.selection-item em {
+  color: var(--text-muted);
+  font-size: 0.78rem;
+}
+
+.selection-item em {
+  font-style: normal;
+}
+
+.folder-inline-empty {
+  border: 1px dashed var(--border-subtle);
+  border-radius: var(--radius-md);
+  background: var(--bg-subtle);
+  padding: 18px 16px;
+  color: var(--text-muted);
+  font-size: 0.84rem;
+}
+
+.front-overlay {
+  z-index: 1100;
 }
 
 .settings-header {
@@ -820,13 +940,28 @@ button svg {
     grid-template-columns: 1fr 1fr;
   }
 
+  .wide-card-actions {
+    grid-template-columns: 1fr 1fr;
+  }
+
   .card-actions .primary-button {
+    grid-column: span 2;
+  }
+
+  .wide-card-actions .secondary-button,
+  .wide-card-actions .primary-button {
     grid-column: span 2;
   }
 
   .undo-message,
   .settings-choice-grid,
-  .theme-toggle-row {
+  .theme-toggle-row,
+  .selection-summary {
     grid-template-columns: 1fr;
+  }
+
+  .manager-section-heading {
+    flex-direction: column;
+    align-items: stretch;
   }
 }

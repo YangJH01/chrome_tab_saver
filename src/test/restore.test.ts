@@ -8,6 +8,7 @@ import type { TabFolder } from "../lib/storage";
 function createFolder(): TabFolder {
   return {
     id: "folder-1",
+    kind: "session",
     name: "업무 시작",
     createdAt: "2026-03-11T05:00:00.000Z",
     updatedAt: "2026-03-11T05:00:00.000Z",

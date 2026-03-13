@@ -83,6 +83,45 @@ type TranslationDictionary = {
   saveTabsBehaviorFailed: string;
   settingsLoadFailed: string;
   foldersLoadFailed: string;
+  favoriteFoldersKicker: string;
+  favoriteFoldersTitle: string;
+  favoriteFoldersSubtitle: string;
+  addFavoriteFolder: string;
+  favoriteFoldersEmpty: string;
+  updatedAt: string;
+  favoriteFolderEmptyHint: string;
+  sessionsKicker: string;
+  sessionsTitle: string;
+  sessionsSubtitle: string;
+  createFavoriteFolderTitle: string;
+  favoriteFolderName: string;
+  favoriteFolderNamePlaceholder: string;
+  create: string;
+  favoriteFolderCreateSuccess: (name: string) => string;
+  favoriteFolderCreateFailed: string;
+  addTabs: string;
+  addTabsKicker: string;
+  addTabsDialogTitle: (name: string) => string;
+  addTabsDialogDescription: string;
+  selectedTabsCount: (selectedCount: number, totalCount: number) => string;
+  currentWindowTabsLoadFailed: string;
+  currentWindowTabsEmpty: string;
+  untitledTab: string;
+  nonRestorableTab: string;
+  nonRestorableBadge: string;
+  addSelectedTabs: string;
+  favoriteTabsSaveFailed: string;
+  favoriteFolderUnavailable: string;
+  selectTabsToAdd: string;
+  duplicateTabsTitle: string;
+  duplicateTabsConfirm: (name: string, count: number) => string;
+  skipDuplicates: string;
+  overwrite: string;
+  favoriteTabsSaved: (addedCount: number, updatedCount: number) => string;
+  favoriteTabsSkippedDuplicates: (count: number) => string;
+  favoriteTabsSkippedSelectionDuplicates: (count: number) => string;
+  favoriteTabsSkippedNonRestorable: (count: number) => string;
+  favoriteTabsUnchanged: string;
 };
 
 const translations: Record<LanguageCode, TranslationDictionary> = {
@@ -167,7 +206,60 @@ const translations: Record<LanguageCode, TranslationDictionary> = {
     saveTabsBehaviorSaved: (label) => `저장 후 탭 처리가 ${label}로 설정되었습니다.`,
     saveTabsBehaviorFailed: "저장 후 탭 처리 설정을 저장하지 못했습니다.",
     settingsLoadFailed: "전역 설정을 불러오지 못했습니다.",
-    foldersLoadFailed: "저장된 탭 폴더를 불러오지 못했습니다."
+    foldersLoadFailed: "저장된 탭 폴더를 불러오지 못했습니다.",
+    favoriteFoldersKicker: "Favorite Folders",
+    favoriteFoldersTitle: "즐겨찾기 폴더",
+    favoriteFoldersSubtitle: "빈 폴더를 만들고 현재 창의 탭 중 필요한 것만 골라 담아 두세요.",
+    addFavoriteFolder: "폴더 추가",
+    favoriteFoldersEmpty: "아직 만든 즐겨찾기 폴더가 없습니다.",
+    updatedAt: "최근 수정",
+    favoriteFolderEmptyHint: "아직 저장된 탭이 없습니다. `탭 추가`로 현재 창의 탭을 골라 넣어 보세요.",
+    sessionsKicker: "Saved Sessions",
+    sessionsTitle: "저장된 세션",
+    sessionsSubtitle: "기존처럼 현재 창 전체를 저장한 세션을 관리하고 복원합니다.",
+    createFavoriteFolderTitle: "즐겨찾기 폴더 만들기",
+    favoriteFolderName: "폴더 이름",
+    favoriteFolderNamePlaceholder: "폴더 이름을 입력하세요",
+    create: "확인",
+    favoriteFolderCreateSuccess: (name) => `"${name}" 폴더가 생성되었습니다.`,
+    favoriteFolderCreateFailed: "즐겨찾기 폴더 생성에 실패했습니다.",
+    addTabs: "탭 추가",
+    addTabsKicker: "Current Window Tabs",
+    addTabsDialogTitle: (name) => `"${name}"에 탭 추가`,
+    addTabsDialogDescription: "현재 창의 탭을 골라 즐겨찾기 폴더에 추가합니다.",
+    selectedTabsCount: (selectedCount, totalCount) => `${selectedCount}개 선택 / ${totalCount}개 가능`,
+    currentWindowTabsLoadFailed: "현재 창 탭 목록을 불러오지 못했습니다.",
+    currentWindowTabsEmpty: "현재 창에 표시할 탭이 없습니다.",
+    untitledTab: "제목 없는 탭",
+    nonRestorableTab: "저장할 수 없는 탭",
+    nonRestorableBadge: "저장 불가",
+    addSelectedTabs: "선택한 탭 추가",
+    favoriteTabsSaveFailed: "즐겨찾기 폴더에 탭을 추가하지 못했습니다.",
+    favoriteFolderUnavailable: "선택한 즐겨찾기 폴더를 찾을 수 없습니다.",
+    selectTabsToAdd: "추가할 탭을 하나 이상 선택하세요.",
+    duplicateTabsTitle: "중복 탭 발견",
+    duplicateTabsConfirm: (name, count) => `"${name}" 폴더에 이미 있는 탭이 ${count}개 있습니다. 덮어쓸까요?`,
+    skipDuplicates: "건너뛰기",
+    overwrite: "덮어쓰기",
+    favoriteTabsSaved: (addedCount, updatedCount) => {
+      if (addedCount > 0 && updatedCount > 0) {
+        return `${addedCount}개 추가, ${updatedCount}개 덮어씀`;
+      }
+
+      if (addedCount > 0) {
+        return `${addedCount}개 탭 추가됨`;
+      }
+
+      if (updatedCount > 0) {
+        return `${updatedCount}개 기존 탭 덮어씀`;
+      }
+
+      return "변경된 탭이 없습니다.";
+    },
+    favoriteTabsSkippedDuplicates: (count) => `중복 ${count}개 건너뜀`,
+    favoriteTabsSkippedSelectionDuplicates: (count) => `선택 목록 내 중복 ${count}개 제외`,
+    favoriteTabsSkippedNonRestorable: (count) => `저장 불가 ${count}개 제외`,
+    favoriteTabsUnchanged: "변경된 탭이 없습니다."
   },
   en: {
     popupKicker: "Session Capture",
@@ -250,7 +342,60 @@ const translations: Record<LanguageCode, TranslationDictionary> = {
     saveTabsBehaviorSaved: (label) => `After-save tab behavior saved as ${label}.`,
     saveTabsBehaviorFailed: "Failed to save the after-save tab behavior.",
     settingsLoadFailed: "Failed to load global settings.",
-    foldersLoadFailed: "Failed to load saved tab folders."
+    foldersLoadFailed: "Failed to load saved tab folders.",
+    favoriteFoldersKicker: "Favorite Folders",
+    favoriteFoldersTitle: "Favorite folders",
+    favoriteFoldersSubtitle: "Create empty folders and keep only the tabs you hand-pick from the current window.",
+    addFavoriteFolder: "Add folder",
+    favoriteFoldersEmpty: "There are no favorite folders yet.",
+    updatedAt: "Updated",
+    favoriteFolderEmptyHint: "No tabs saved yet. Use Add tabs to pick from the current window.",
+    sessionsKicker: "Saved Sessions",
+    sessionsTitle: "Saved sessions",
+    sessionsSubtitle: "These keep the existing full-window save flow and restore controls.",
+    createFavoriteFolderTitle: "Create favorite folder",
+    favoriteFolderName: "Folder name",
+    favoriteFolderNamePlaceholder: "Enter a folder name",
+    create: "Create",
+    favoriteFolderCreateSuccess: (name) => `Created "${name}".`,
+    favoriteFolderCreateFailed: "Failed to create the favorite folder.",
+    addTabs: "Add tabs",
+    addTabsKicker: "Current Window Tabs",
+    addTabsDialogTitle: (name) => `Add tabs to "${name}"`,
+    addTabsDialogDescription: "Pick the tabs from the current window that belong in this folder.",
+    selectedTabsCount: (selectedCount, totalCount) => `${selectedCount} selected / ${totalCount} available`,
+    currentWindowTabsLoadFailed: "Failed to load the current window tabs.",
+    currentWindowTabsEmpty: "There are no tabs to show from the current window.",
+    untitledTab: "Untitled tab",
+    nonRestorableTab: "This tab cannot be saved",
+    nonRestorableBadge: "Unavailable",
+    addSelectedTabs: "Add selected tabs",
+    favoriteTabsSaveFailed: "Failed to add tabs to the favorite folder.",
+    favoriteFolderUnavailable: "The selected favorite folder is no longer available.",
+    selectTabsToAdd: "Select at least one tab to add.",
+    duplicateTabsTitle: "Duplicate tabs found",
+    duplicateTabsConfirm: (name, count) => `${count} tab${count === 1 ? "" : "s"} already exist in "${name}". Overwrite them?`,
+    skipDuplicates: "Skip duplicates",
+    overwrite: "Overwrite",
+    favoriteTabsSaved: (addedCount, updatedCount) => {
+      if (addedCount > 0 && updatedCount > 0) {
+        return `Added ${addedCount} and overwrote ${updatedCount}.`;
+      }
+
+      if (addedCount > 0) {
+        return `Added ${addedCount} tab${addedCount === 1 ? "" : "s"}.`;
+      }
+
+      if (updatedCount > 0) {
+        return `Overwrote ${updatedCount} tab${updatedCount === 1 ? "" : "s"}.`;
+      }
+
+      return "Nothing changed.";
+    },
+    favoriteTabsSkippedDuplicates: (count) => `Skipped ${count} existing duplicate${count === 1 ? "" : "s"}.`,
+    favoriteTabsSkippedSelectionDuplicates: (count) => `Ignored ${count} duplicate${count === 1 ? "" : "s"} inside the selection.`,
+    favoriteTabsSkippedNonRestorable: (count) => `Excluded ${count} non-restorable tab${count === 1 ? "" : "s"}.`,
+    favoriteTabsUnchanged: "Nothing changed."
   }
 };
 

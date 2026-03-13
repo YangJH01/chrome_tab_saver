@@ -11,19 +11,71 @@ import {
 } from "../lib/i18n";
 import { type RestoreMode, restoreFolderTabs } from "../lib/restore";
 import {
+  addTabsToFavoriteFolder,
+  createFavoriteFolder,
+  deleteFolder,
+  formatStoredTimestamp,
+  isFavoriteFolder,
+  isRestorableUrl,
+  isSessionFolder,
+  previewTabsForFavoriteFolder,
+  renameFolder,
+  saveFolder,
+  type AddTabsToFavoriteFolderResult,
+  type FavoriteTabFolder,
+  type TabFolder
+} from "../lib/storage";
+import {
   type LanguageCode,
   type SaveTabsBehavior,
   type ThemeMode
 } from "../lib/settings";
-import {
-  deleteFolder,
-  formatStoredTimestamp,
-  renameFolder,
-  saveFolder,
-  type TabFolder
-} from "../lib/storage";
 import { useAppSettings } from "../lib/useAppSettings";
 import { useFolders } from "../lib/useFolders";
+
+type ConfirmTone = "danger" | "primary";
+
+type ConfirmState = {
+  title: string;
+  message: string;
+  confirmLabel: string;
+  tone: ConfirmTone;
+  action: () => Promise<void>;
+};
+
+type SelectableCurrentTab = {
+  key: string;
+  tab: chrome.tabs.Tab;
+  selectable: boolean;
+};
+
+type DuplicateResolutionState = {
+  folderId: string;
+  tabs: chrome.tabs.Tab[];
+  duplicateCount: number;
+};
+
+function buildFavoriteAddFeedback(
+  result: AddTabsToFavoriteFolderResult,
+  messages: ReturnType<typeof getMessages>
+): string {
+  const parts: string[] = [];
+
+  if (result.addedCount > 0 || result.updatedCount > 0) {
+    parts.push(messages.favoriteTabsSaved(result.addedCount, result.updatedCount));
+  }
+  if (result.skippedDuplicateCount > 0) {
+    parts.push(messages.favoriteTabsSkippedDuplicates(result.skippedDuplicateCount));
+  }
+  if (result.skippedSelectionDuplicateCount > 0) {
+    parts.push(messages.favoriteTabsSkippedSelectionDuplicates(result.skippedSelectionDuplicateCount));
+  }
+  if (result.skippedNonRestorableCount > 0) {
+    parts.push(messages.favoriteTabsSkippedNonRestorable(result.skippedNonRestorableCount));
+  }
+
+  return parts.join(" ").trim() || messages.favoriteTabsUnchanged;
+}
 
 const RefreshIcon = () => (
   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/></svg>
@@ -61,6 +113,8 @@ export function ManagerApp() {
   const { error: settingsError, settings, update } = useAppSettings();
   const messages = getMessages(settings.language);
   const locale = getLocale(settings.language);
+  const sessionFolders = folders.filter(isSessionFolder);
+  const favoriteFolders = folders.filter(isFavoriteFolder);
   const [draftNames, setDraftNames] = useState<Record<string, string>>({});
   const [restoreModes, setRestoreModes] = useState<Record<string, RestoreMode>>({});
   const [expandedFolderId, setExpandedFolderId] = useState<string | null>(null);
@@ -70,11 +124,23 @@ export function ManagerApp() {
   const [undoMessage, setUndoMessage] = useState<string | null>(null);
   const [undoAction, setUndoAction] = useState<(() => Promise<void>) | null>(null);
   const [undoSequence, setUndoSequence] = useState(0);
-  const [confirmMessage, setConfirmMessage] = useState<string | null>(null);
-  const [confirmAction, setConfirmAction] = useState<(() => Promise<void>) | null>(null);
+  const [confirmState, setConfirmState] = useState<ConfirmState | null>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [createFavoriteOpen, setCreateFavoriteOpen] = useState(false);
+  const [newFavoriteName, setNewFavoriteName] = useState("");
+  const [pickerFolderId, setPickerFolderId] = useState<string | null>(null);
+  const [pickerTabs, setPickerTabs] = useState<SelectableCurrentTab[]>([]);
+  const [selectedTabKeys, setSelectedTabKeys] = useState<string[]>([]);
+  const [pickerLoading, setPickerLoading] = useState(false);
+  const [pickerError, setPickerError] = useState<string | null>(null);
+  const [pickerBusy, setPickerBusy] = useState(false);
+  const [duplicateResolution, setDuplicateResolution] = useState<DuplicateResolutionState | null>(null);
   const undoTimerRef = useRef<number | null>(null);
   const previousDefaultRestoreModeRef = useRef(settings.defaultRestoreMode);
+
+  const pickerFolder = pickerFolderId ? favoriteFolders.find((folder) => folder.id === pickerFolderId) ?? null : null;
+  const selectedCount = selectedTabKeys.length;
+  const selectableCount = pickerTabs.filter((candidate) => candidate.selectable).length;
 
   useEffect(() => {
     setDraftNames((currentDraftNames) => {
@@ -89,7 +155,7 @@ export function ManagerApp() {
     setRestoreModes((currentRestoreModes) => {
       const nextRestoreModes: Record<string, RestoreMode> = {};
 
-      for (const folder of folders) {
+      for (const folder of sessionFolders) {
         nextRestoreModes[folder.id] = currentRestoreModes[folder.id] ?? settings.defaultRestoreMode;
       }
 
@@ -107,7 +173,7 @@ export function ManagerApp() {
     setRestoreModes((currentRestoreModes) => {
       const nextRestoreModes: Record<string, RestoreMode> = {};
 
-      for (const folder of folders) {
+      for (const folder of sessionFolders) {
         const currentRestoreMode = currentRestoreModes[folder.id];
 
         nextRestoreModes[folder.id] =
@@ -121,6 +187,22 @@ export function ManagerApp() {
 
     previousDefaultRestoreModeRef.current = settings.defaultRestoreMode;
   }, [folders, settings.defaultRestoreMode]);
+
+  useEffect(() => {
+    setExpandedFolderId((currentFolderId) => (
+      currentFolderId && folders.some((folder) => folder.id === currentFolderId) ? currentFolderId : null
+    ));
+  }, [folders]);
+
+  useEffect(() => {
+    if (!pickerFolderId) {
+      return;
+    }
+
+    if (!folders.some((folder) => folder.id === pickerFolderId && isFavoriteFolder(folder))) {
+      closePicker();
+    }
+  }, [folders, pickerFolderId]);
 
   useEffect(() => {
     return () => {
@@ -140,6 +222,29 @@ export function ManagerApp() {
     }, 5000);
   }
 
+  function openConfirm(title: string, message: string, confirmLabel: string, tone: ConfirmTone, action: () => Promise<void>) {
+    setConfirmState({ title, message, confirmLabel, tone, action });
+  }
+
+  function closeConfirm() {
+    setConfirmState(null);
+  }
+
+  function closeCreateFavorite() {
+    setCreateFavoriteOpen(false);
+    setNewFavoriteName("");
+  }
+
+  function closePicker() {
+    setPickerFolderId(null);
+    setPickerTabs([]);
+    setSelectedTabKeys([]);
+    setPickerError(null);
+    setPickerLoading(false);
+    setPickerBusy(false);
+    setDuplicateResolution(null);
+  }
+
   async function handleUndo() {
     if (!undoAction) return;
     const restoreAction = undoAction;
@@ -157,20 +262,10 @@ export function ManagerApp() {
     }
   }
 
-  function openConfirm(message: string, action: () => Promise<void>) {
-    setConfirmMessage(message);
-    setConfirmAction(() => action);
-  }
-
-  function closeConfirm() {
-    setConfirmMessage(null);
-    setConfirmAction(null);
-  }
-
   async function handleConfirm() {
-    if (!confirmAction) return;
+    if (!confirmState) return;
 
-    const action = confirmAction;
+    const action = confirmState.action;
 
     closeConfirm();
     await action();
@@ -183,7 +278,7 @@ export function ManagerApp() {
     try {
       await renameFolder(folder.id, draftNames[folder.id] ?? folder.name);
       await refresh();
-      setFeedback(messages.renameSuccess(folder.name));
+      setFeedback(messages.renameSuccess(draftNames[folder.id] ?? folder.name));
     } catch (caughtError) {
       console.error(caughtError);
       setError(messages.renameFailed);
@@ -193,7 +288,7 @@ export function ManagerApp() {
   }
 
   async function handleDelete(folder: TabFolder) {
-    openConfirm(messages.deleteFolderConfirm(folder.name), async () => {
+    openConfirm(messages.confirmTitle, messages.deleteFolderConfirm(folder.name), messages.delete, "danger", async () => {
       setBusyFolderId(folder.id);
       setFeedback(null);
       setError(null);
@@ -212,12 +307,11 @@ export function ManagerApp() {
     });
   }
 
-  async function handleRestore(folder: TabFolder) {
+  async function handleRestore(folder: TabFolder, mode: RestoreMode) {
     setBusyFolderId(folder.id);
     setFeedback(null);
     setError(null);
     try {
-      const mode = restoreModes[folder.id] ?? settings.defaultRestoreMode;
       await restoreFolderTabs(folder, mode);
       setFeedback(messages.sessionRestoreSuccess(folder.name, getRestoreModeLabelByLanguage(mode, settings.language)));
     } catch (caughtError) {
@@ -226,6 +320,100 @@ export function ManagerApp() {
     } finally {
       setBusyFolderId(null);
     }
+  }
+
+  async function handleCreateFavorite() {
+    setBusyFolderId("create-favorite");
+    setFeedback(null);
+    setError(null);
+    try {
+      const folder = createFavoriteFolder(newFavoriteName);
+
+      await saveFolder(folder);
+      await refresh();
+      closeCreateFavorite();
+      setFeedback(messages.favoriteFolderCreateSuccess(folder.name));
+    } catch (caughtError) {
+      console.error(caughtError);
+      setError(messages.favoriteFolderCreateFailed);
+    } finally {
+      setBusyFolderId(null);
+    }
+  }
+
+  async function handleOpenTabPicker(folder: FavoriteTabFolder) {
+    setPickerFolderId(folder.id);
+    setPickerLoading(true);
+    setPickerError(null);
+    setPickerTabs([]);
+    setSelectedTabKeys([]);
+    setDuplicateResolution(null);
+    try {
+      const tabs = await chrome.tabs.query({ currentWindow: true });
+
+      setPickerTabs(
+        tabs.map((tab, index) => ({
+          key: typeof tab.id === "number" ? String(tab.id) : `current-window-tab-${index}`,
+          tab,
+          selectable: isRestorableUrl(tab.url)
+        }))
+      );
+    } catch (caughtError) {
+      console.error(caughtError);
+      setPickerError(messages.currentWindowTabsLoadFailed);
+    } finally {
+      setPickerLoading(false);
+    }
+  }
+
+  async function applyFavoriteTabs(folderId: string, tabs: chrome.tabs.Tab[], overwriteDuplicates: boolean) {
+    setBusyFolderId(folderId);
+    setPickerBusy(true);
+    setFeedback(null);
+    setError(null);
+    setPickerError(null);
+    try {
+      const result = await addTabsToFavoriteFolder(folderId, tabs, { overwriteDuplicates });
+
+      await refresh();
+      closePicker();
+      setFeedback(buildFavoriteAddFeedback(result, messages));
+    } catch (caughtError) {
+      console.error(caughtError);
+      setError(messages.favoriteTabsSaveFailed);
+    } finally {
+      setBusyFolderId(null);
+      setPickerBusy(false);
+    }
+  }
+
+  async function handleSubmitTabPicker() {
+    if (!pickerFolder) {
+      setPickerError(messages.favoriteFolderUnavailable);
+      return;
+    }
+
+    const selectedTabs = pickerTabs
+      .filter((candidate) => candidate.selectable && selectedTabKeys.includes(candidate.key))
+      .map((candidate) => candidate.tab);
+
+    if (selectedTabs.length === 0) {
+      setPickerError(messages.selectTabsToAdd);
+      return;
+    }
+
+    const preview = previewTabsForFavoriteFolder(pickerFolder, selectedTabs);
+
+    if (preview.duplicateCount > 0) {
+      setDuplicateResolution({
+        folderId: pickerFolder.id,
+        tabs: selectedTabs,
+        duplicateCount: preview.duplicateCount
+      });
+      return;
+    }
+
+    await applyFavoriteTabs(pickerFolder.id, selectedTabs, false);
   }
 
   async function handleDefaultRestoreModeChange(mode: RestoreMode) {
@@ -316,89 +504,352 @@ export function ManagerApp() {
       )}
 
       {loading && <p className="empty-state">{messages.loading}</p>}
-      {!loading && folders.length === 0 && (
-        <div className="empty-panel">
-          <p className="empty-state">{messages.noSavedSessions}</p>
+
+      <section className="library-section">
+        <div className="manager-section-heading">
+          <div>
+            <p className="popup-section-kicker">{messages.favoriteFoldersKicker}</p>
+            <h2 className="manager-section-title">{messages.favoriteFoldersTitle}</h2>
+            <p className="manager-section-copy">{messages.favoriteFoldersSubtitle}</p>
+          </div>
+          <button className="secondary-button" onClick={() => setCreateFavoriteOpen(true)}>
+            {messages.addFavoriteFolder}
+          </button>
+        </div>
+
+        {!loading && favoriteFolders.length === 0 && (
+          <div className="empty-panel compact-empty-panel">
+            <p className="empty-state">{messages.favoriteFoldersEmpty}</p>
+          </div>
+        )}
+
+        <section className="folder-grid">
+          {favoriteFolders.map((folder) => {
+            const isBusy = busyFolderId === folder.id;
+            const isExpanded = expandedFolderId === folder.id;
+
+            return (
+              <article key={folder.id} className="panel folder-card">
+                <div className="folder-card-top">
+                  <div className="folder-card-info">
+                    <h2 title={folder.name}>{folder.name}</h2>
+                  </div>
+                  <span className="pill">{messages.tabsCount(folder.tabs.length)}</span>
+                </div>
+
+                <div className="inline-field">
+                  <label>{messages.renameLabel}</label>
+                  <div className="input-group">
+                    <input
+                      className="text-input"
+                      value={draftNames[folder.id] ?? folder.name}
+                      onChange={(event) => setDraftNames({ ...draftNames, [folder.id]: event.target.value })}
+                    />
+                    <button className="secondary-button" onClick={() => void handleRename(folder)} disabled={isBusy}>
+                      {messages.save}
+                    </button>
+                  </div>
+                </div>
+
+                <dl className="meta-row">
+                  <div className="meta-item">
+                    <dt>{messages.savedAt}</dt>
+                    <dd>{formatStoredTimestamp(folder.createdAt, locale)}</dd>
+                  </div>
+                  <div className="meta-item">
+                    <dt>{messages.updatedAt}</dt>
+                    <dd>{formatStoredTimestamp(folder.updatedAt, locale)}</dd>
+                  </div>
+                </dl>
+
+                <div className="card-actions wide-card-actions">
+                  <button className="secondary-button" onClick={() => void handleOpenTabPicker(folder)} disabled={isBusy}>
+                    <span>{messages.addTabs}</span>
+                  </button>
+                  <button
+                    className="primary-button"
+                    onClick={() => void handleRestore(folder, settings.defaultRestoreMode)}
+                    disabled={isBusy || folder.tabs.length === 0}
+                  >
+                    <span>{messages.restoreNow}</span>
+                  </button>
+                  <button className="ghost-button" onClick={() => setExpandedFolderId(isExpanded ? null : folder.id)} aria-label={messages.managerTitle}>
+                    <ListIcon />
+                  </button>
+                  <button className="danger-button" onClick={() => void handleDelete(folder)} disabled={isBusy} aria-label={messages.delete}>
+                    <TrashIcon />
+                  </button>
+                </div>
+
+                {isExpanded && (
+                  folder.tabs.length > 0 ? (
+                    <ul className="tab-list">
+                      {folder.tabs.map((tab) => (
+                        <li key={tab.id} className="tab-item">
+                          {tab.favIconUrl ? <img className="favicon" src={tab.favIconUrl} alt="" /> : <div className="favicon favicon-fallback" />}
+                          <div className="tab-content">
+                            <strong title={tab.title}>{tab.title}</strong>
+                            <a href={tab.url} target="_blank" rel="noreferrer" title={tab.url}>{tab.url}</a>
+                          </div>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <div className="folder-inline-empty">
+                      <p>{messages.favoriteFolderEmptyHint}</p>
+                    </div>
+                  )
+                )}
+              </article>
+            );
+          })}
+        </section>
+      </section>
+
+      <section className="library-section">
+        <div className="manager-section-heading">
+          <div>
+            <p className="popup-section-kicker">{messages.sessionsKicker}</p>
+            <h2 className="manager-section-title">{messages.sessionsTitle}</h2>
+            <p className="manager-section-copy">{messages.sessionsSubtitle}</p>
+          </div>
+        </div>
+
+        {!loading && sessionFolders.length === 0 && (
+          <div className="empty-panel compact-empty-panel">
+            <p className="empty-state">{messages.noSavedSessions}</p>
+          </div>
+        )}
+
+        <section className="folder-grid">
+          {sessionFolders.map((folder) => {
+            const isBusy = busyFolderId === folder.id;
+            const isExpanded = expandedFolderId === folder.id;
+
+            return (
+              <article key={folder.id} className="panel folder-card">
+                <div className="folder-card-top">
+                  <div className="folder-card-info">
+                    <h2 title={folder.name}>{folder.name}</h2>
+                  </div>
+                  <span className="pill">{messages.tabsCount(folder.tabs.length)}</span>
+                </div>
+
+                <div className="inline-field">
+                  <label>{messages.renameLabel}</label>
+                  <div className="input-group">
+                    <input
+                      className="text-input"
+                      value={draftNames[folder.id] ?? folder.name}
+                      onChange={(event) => setDraftNames({ ...draftNames, [folder.id]: event.target.value })}
+                    />
+                    <button className="secondary-button" onClick={() => void handleRename(folder)} disabled={isBusy}>
+                      {messages.save}
+                    </button>
+                  </div>
+                </div>
+
+                <dl className="meta-row">
+                  <div className="meta-item">
+                    <dt>{messages.savedAt}</dt>
+                    <dd>{formatStoredTimestamp(folder.createdAt, locale)}</dd>
+                  </div>
+                  <div className="meta-item">
+                    <dt>{messages.restoreMode}</dt>
+                    <dd>
+                      <select
+                        className="select-input"
+                        value={restoreModes[folder.id] ?? settings.defaultRestoreMode}
+                        onChange={(event) => setRestoreModes({ ...restoreModes, [folder.id]: event.target.value as RestoreMode })}
+                      >
+                        <option value="new-tab">{messages.newTabTitle}</option>
+                        <option value="current-tab">{messages.currentTabTitle}</option>
+                      </select>
+                    </dd>
+                  </div>
+                </dl>
+
+                <div className="card-actions">
+                  <button
+                    className="primary-button"
+                    onClick={() => void handleRestore(folder, restoreModes[folder.id] ?? settings.defaultRestoreMode)}
+                    disabled={isBusy}
+                  >
+                    <span>{messages.restoreNow}</span>
+                  </button>
+                  <button className="ghost-button" onClick={() => setExpandedFolderId(isExpanded ? null : folder.id)} aria-label={messages.managerTitle}>
+                    <ListIcon />
+                  </button>
+                  <button className="danger-button" onClick={() => void handleDelete(folder)} disabled={isBusy} aria-label={messages.delete}>
+                    <TrashIcon />
+                  </button>
+                </div>
+
+                {isExpanded && (
+                  <ul className="tab-list">
+                    {folder.tabs.map((tab) => (
+                      <li key={tab.id} className="tab-item">
+                        {tab.favIconUrl ? <img className="favicon" src={tab.favIconUrl} alt="" /> : <div className="favicon favicon-fallback" />}
+                        <div className="tab-content">
+                          <strong title={tab.title}>{tab.title}</strong>
+                          <a href={tab.url} target="_blank" rel="noreferrer" title={tab.url}>{tab.url}</a>
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </article>
+            );
+          })}
+        </section>
+      </section>
+
+      {createFavoriteOpen && (
+        <div className="confirm-overlay" role="presentation" onClick={closeCreateFavorite}>
+          <div className="confirm-dialog form-dialog" role="dialog" aria-modal="true" onClick={(event) => event.stopPropagation()}>
+            <p className="confirm-title">{messages.createFavoriteFolderTitle}</p>
+            <div className="inline-field">
+              <label>{messages.favoriteFolderName}</label>
+              <input
+                autoFocus
+                className="text-input"
+                value={newFavoriteName}
+                onChange={(event) => setNewFavoriteName(event.target.value)}
+                placeholder={messages.favoriteFolderNamePlaceholder}
+              />
+            </div>
+            <div className="confirm-actions">
+              <button className="ghost-button compact-action-button" onClick={closeCreateFavorite}>
+                {messages.cancel}
+              </button>
+              <button
+                className="primary-button compact-action-button"
+                onClick={() => void handleCreateFavorite()}
+                disabled={busyFolderId === "create-favorite"}
+              >
+                {messages.create}
+              </button>
+            </div>
+          </div>
         </div>
       )}
 
-      <section className="folder-grid">
-        {folders.map((folder) => {
-          const isBusy = busyFolderId === folder.id;
-          const isExpanded = expandedFolderId === folder.id;
-
-          return (
-            <article key={folder.id} className="panel folder-card">
-              <div className="folder-card-top">
-                <div className="folder-card-info">
-                  <h2 title={folder.name}>{folder.name}</h2>
-                </div>
-                <span className="pill">{messages.tabsCount(folder.tabs.length)}</span>
+      {pickerFolder && (
+        <div className="confirm-overlay" role="presentation" onClick={closePicker}>
+          <div className="selection-dialog" role="dialog" aria-modal="true" onClick={(event) => event.stopPropagation()}>
+            <div className="settings-header">
+              <div>
+                <p className="popup-section-kicker">{messages.addTabsKicker}</p>
+                <h2 className="settings-title">{messages.addTabsDialogTitle(pickerFolder.name)}</h2>
               </div>
+              <button className="ghost-button icon-action-button" onClick={closePicker} aria-label={messages.cancel}>
+                <CloseIcon />
+              </button>
+            </div>
 
-              <div className="inline-field">
-                <label>{messages.renameLabel}</label>
-                <div className="input-group">
-                  <input
-                    className="text-input"
-                    value={draftNames[folder.id] ?? folder.name}
-                    onChange={(event) => setDraftNames({ ...draftNames, [folder.id]: event.target.value })}
-                  />
-                  <button className="secondary-button" onClick={() => void handleRename(folder)} disabled={isBusy}>
-                    {messages.save}
-                  </button>
-                </div>
-              </div>
+            <div className="selection-summary">
+              <p className="manager-section-copy">{messages.addTabsDialogDescription}</p>
+              <span className="pill">{messages.selectedTabsCount(selectedCount, selectableCount)}</span>
+            </div>
 
-              <dl className="meta-row">
-                <div className="meta-item">
-                  <dt>{messages.savedAt}</dt>
-                  <dd>{formatStoredTimestamp(folder.createdAt, locale)}</dd>
-                </div>
-                <div className="meta-item">
-                  <dt>{messages.restoreMode}</dt>
-                  <dd>
-                    <select
-                      className="select-input"
-                      value={restoreModes[folder.id] ?? settings.defaultRestoreMode}
-                      onChange={(event) => setRestoreModes({ ...restoreModes, [folder.id]: event.target.value as RestoreMode })}
-                    >
-                      <option value="new-tab">{messages.newTabTitle}</option>
-                      <option value="current-tab">{messages.currentTabTitle}</option>
-                    </select>
-                  </dd>
-                </div>
-              </dl>
+            {pickerLoading ? <p className="empty-state">{messages.loading}</p> : null}
+            {!pickerLoading && pickerTabs.length === 0 ? <p className="empty-state">{messages.currentWindowTabsEmpty}</p> : null}
 
-              <div className="card-actions">
-                <button className="primary-button" onClick={() => void handleRestore(folder)} disabled={isBusy}>
-                  <span>{messages.restoreNow}</span>
-                </button>
-                <button className="ghost-button" onClick={() => setExpandedFolderId(isExpanded ? null : folder.id)} aria-label={messages.managerTitle}>
-                  <ListIcon />
-                </button>
-                <button className="danger-button" onClick={() => void handleDelete(folder)} disabled={isBusy} aria-label={messages.delete}>
-                  <TrashIcon />
-                </button>
-              </div>
+            {!pickerLoading && pickerTabs.length > 0 && (
+              <ul className="selection-list">
+                {pickerTabs.map((candidate) => {
+                  const checked = selectedTabKeys.includes(candidate.key);
+                  const title = candidate.tab.title?.trim() || candidate.tab.url || messages.untitledTab;
+                  const subtitle = candidate.tab.url || messages.nonRestorableTab;
 
-              {isExpanded && (
-                <ul className="tab-list">
-                  {folder.tabs.map((tab) => (
-                    <li key={tab.id} className="tab-item">
-                      {tab.favIconUrl ? <img className="favicon" src={tab.favIconUrl} alt="" /> : <div className="favicon favicon-fallback" />}
-                      <div className="tab-content">
-                        <strong title={tab.title}>{tab.title}</strong>
-                        <a href={tab.url} target="_blank" rel="noreferrer" title={tab.url}>{tab.url}</a>
-                      </div>
+                  return (
+                    <li key={candidate.key}>
+                      <label className={`selection-item ${candidate.selectable ? "" : "is-disabled"}`}>
+                        <input
+                          type="checkbox"
+                          checked={checked}
+                          disabled={!candidate.selectable || pickerBusy}
+                          onChange={() => setSelectedTabKeys((currentKeys) => (
+                            checked ? currentKeys.filter((key) => key !== candidate.key) : [...currentKeys, candidate.key]
+                          ))}
+                        />
+                        <div className="selection-copy">
+                          <strong title={title}>{title}</strong>
+                          <span title={subtitle}>{subtitle}</span>
+                        </div>
+                        {!candidate.selectable ? <em>{messages.nonRestorableBadge}</em> : null}
+                      </label>
                     </li>
-                  ))}
-                </ul>
-              )}
-            </article>
-          );
-        })}
-      </section>
+                  );
+                })}
+              </ul>
+            )}
+
+            {pickerError && <p className="message error">{pickerError}</p>}
+
+            <div className="confirm-actions">
+              <button className="ghost-button compact-action-button" onClick={closePicker}>
+                {messages.cancel}
+              </button>
+              <button
+                className="primary-button compact-action-button"
+                onClick={() => void handleSubmitTabPicker()}
+                disabled={pickerBusy || pickerLoading || selectableCount === 0}
+              >
+                {messages.addSelectedTabs}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {duplicateResolution && pickerFolder && (
+        <div className="confirm-overlay front-overlay" role="presentation" onClick={() => setDuplicateResolution(null)}>
+          <div className="confirm-dialog" role="dialog" aria-modal="true" onClick={(event) => event.stopPropagation()}>
+            <p className="confirm-title">{messages.duplicateTabsTitle}</p>
+            <p className="confirm-copy">{messages.duplicateTabsConfirm(pickerFolder.name, duplicateResolution.duplicateCount)}</p>
+            <div className="confirm-actions">
+              <button className="ghost-button compact-action-button" onClick={() => setDuplicateResolution(null)}>
+                {messages.cancel}
+              </button>
+              <button
+                className="secondary-button compact-action-button"
+                onClick={() => void applyFavoriteTabs(duplicateResolution.folderId, duplicateResolution.tabs, false)}
+                disabled={pickerBusy}
+              >
+                {messages.skipDuplicates}
+              </button>
+              <button
+                className="primary-button compact-action-button"
+                onClick={() => void applyFavoriteTabs(duplicateResolution.folderId, duplicateResolution.tabs, true)}
+                disabled={pickerBusy}
+              >
+                {messages.overwrite}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {confirmState && (
+        <div className="confirm-overlay" role="presentation" onClick={closeConfirm}>
+          <div className="confirm-dialog" role="dialog" aria-modal="true" onClick={(event) => event.stopPropagation()}>
+            <p className="confirm-title">{confirmState.title}</p>
+            <p className="confirm-copy">{confirmState.message}</p>
+            <div className="confirm-actions">
+              <button className="ghost-button compact-action-button" onClick={closeConfirm}>
+                {messages.cancel}
+              </button>
+              <button
+                className={`${confirmState.tone === "danger" ? "danger-button" : "primary-button"} compact-action-button`}
+                onClick={() => void handleConfirm()}
+              >
+                {confirmState.confirmLabel}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {settingsOpen && (
         <div className="confirm-overlay" role="presentation" onClick={() => setSettingsOpen(false)}>
@@ -529,23 +980,6 @@ export function ManagerApp() {
                 </button>
               </div>
             </section>
-          </div>
-        </div>
-      )}
-
-      {confirmMessage && (
-        <div className="confirm-overlay" role="presentation" onClick={closeConfirm}>
-          <div className="confirm-dialog" role="dialog" aria-modal="true" onClick={(event) => event.stopPropagation()}>
-            <p className="confirm-title">{messages.confirmTitle}</p>
-            <p className="confirm-copy">{confirmMessage}</p>
-            <div className="confirm-actions">
-              <button className="ghost-button compact-action-button" onClick={closeConfirm}>
-                {messages.cancel}
-              </button>
-              <button className="danger-button compact-action-button" onClick={() => void handleConfirm()}>
-                {messages.delete}
-              </button>
-            </div>
           </div>
         </div>
       )}

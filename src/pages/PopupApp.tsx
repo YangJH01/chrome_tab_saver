@@ -14,6 +14,7 @@ import {
   formatFolderTimestamp,
   formatStoredTimestamp,
   getFolderSkipCounts,
+  isSessionFolder,
   saveFolder,
   type TabFolder
 } from "../lib/storage";
@@ -56,6 +57,7 @@ export function PopupApp() {
   const { error: settingsError, settings } = useAppSettings();
   const messages = getMessages(settings.language);
   const locale = getLocale(settings.language);
+  const sessionFolders = folders.filter(isSessionFolder);
   const [folderName, setFolderName] = useState(() => formatFolderTimestamp());
   const [saving, setSaving] = useState(false);
   const [busyFolderId, setBusyFolderId] = useState<string | null>(null);
@@ -72,7 +74,7 @@ export function PopupApp() {
 
   useEffect(() => {
     setVisibleCount((count) => Math.max(count, INITIAL_VISIBLE_FOLDER_COUNT));
-    setExpandedFolderId((id) => (id && folders.some((folder) => folder.id === id) ? id : null));
+    setExpandedFolderId((id) => (id && sessionFolders.some((folder) => folder.id === id) ? id : null));
   }, [folders]);
 
   useEffect(() => {
@@ -283,8 +285,8 @@ export function PopupApp() {
     }
   }
 
-  const visibleFolders = getVisibleFolders(folders, visibleCount);
-  const hasMore = visibleCount < folders.length;
+  const visibleFolders = getVisibleFolders(sessionFolders, visibleCount);
+  const hasMore = visibleCount < sessionFolders.length;
 
   return (
     <main className="popup-shell">
@@ -336,83 +338,89 @@ export function PopupApp() {
           </button>
         </div>
 
-        <ul className="folder-preview-list">
-          {visibleFolders.map((folder) => {
-            const isExpanded = expandedFolderId === folder.id;
-            const { duplicateCount, nonRestorableCount } = getFolderSkipCounts(folder);
-            return (
-              <li key={folder.id} className="folder-preview-item">
-                <div className="folder-preview-row">
-                  <button
-                    className="folder-toggle-button"
-                    onClick={() => setExpandedFolderId((currentFolderId) => toggleExpandedFolder(currentFolderId, folder.id))}
-                  >
-                    <span className="folder-toggle-glyph">{isExpanded ? <ChevronDown /> : <ChevronRight />}</span>
-                    <strong title={folder.name}>{folder.name}</strong>
-                  </button>
-                  <div className="folder-preview-actions">
-                    <button className="secondary-button compact-action-button" onClick={() => void handleRestore(folder)}>
-                      {messages.open}
+        {sessionFolders.length === 0 ? (
+          <div className="empty-panel compact-empty-panel">
+            <p className="empty-state">{messages.noSavedSessions}</p>
+          </div>
+        ) : (
+          <ul className="folder-preview-list">
+            {visibleFolders.map((folder) => {
+              const isExpanded = expandedFolderId === folder.id;
+              const { duplicateCount, nonRestorableCount } = getFolderSkipCounts(folder);
+              return (
+                <li key={folder.id} className="folder-preview-item">
+                  <div className="folder-preview-row">
+                    <button
+                      className="folder-toggle-button"
+                      onClick={() => setExpandedFolderId((currentFolderId) => toggleExpandedFolder(currentFolderId, folder.id))}
+                    >
+                      <span className="folder-toggle-glyph">{isExpanded ? <ChevronDown /> : <ChevronRight />}</span>
+                      <strong title={folder.name}>{folder.name}</strong>
                     </button>
-                    <button className="ghost-button icon-action-button" onClick={() => void handleDelete(folder)} aria-label={messages.delete}>
-                      <XIcon />
-                    </button>
+                    <div className="folder-preview-actions">
+                      <button className="secondary-button compact-action-button" onClick={() => void handleRestore(folder)}>
+                        {messages.open}
+                      </button>
+                      <button className="ghost-button icon-action-button" onClick={() => void handleDelete(folder)} aria-label={messages.delete}>
+                        <XIcon />
+                      </button>
+                    </div>
                   </div>
-                </div>
-                <div className="folder-preview-meta">
-                  <span>{messages.tabsCount(folder.tabs.length)}</span>
-                  <span>{formatStoredTimestamp(folder.createdAt, locale)}</span>
-                  {duplicateCount > 0 ? <span>{messages.duplicateExcluded(duplicateCount)}</span> : null}
-                  {nonRestorableCount > 0 ? <span>{messages.nonRestorableExcluded(nonRestorableCount)}</span> : null}
-                </div>
+                  <div className="folder-preview-meta">
+                    <span>{messages.tabsCount(folder.tabs.length)}</span>
+                    <span>{formatStoredTimestamp(folder.createdAt, locale)}</span>
+                    {duplicateCount > 0 ? <span>{messages.duplicateExcluded(duplicateCount)}</span> : null}
+                    {nonRestorableCount > 0 ? <span>{messages.nonRestorableExcluded(nonRestorableCount)}</span> : null}
+                  </div>
 
-                {isExpanded && (
-                  <ul className="tab-list">
-                    {folder.tabs.map((tab) => (
-                      <li key={tab.id} className="tab-item">
-                        {tab.favIconUrl ? <img className="favicon" src={tab.favIconUrl} alt="" /> : <div className="favicon favicon-fallback" />}
-                        <div className="tab-content">
-                          <button
-                            className="tab-link-button"
-                            onClick={(event) => {
-                              if (event.ctrlKey || event.metaKey) {
+                  {isExpanded && (
+                    <ul className="tab-list">
+                      {folder.tabs.map((tab) => (
+                        <li key={tab.id} className="tab-item">
+                          {tab.favIconUrl ? <img className="favicon" src={tab.favIconUrl} alt="" /> : <div className="favicon favicon-fallback" />}
+                          <div className="tab-content">
+                            <button
+                              className="tab-link-button"
+                              onClick={(event) => {
+                                if (event.ctrlKey || event.metaKey) {
+                                  event.preventDefault();
+                                  void handleOpenTabBesideCurrent(tab.url, folder.id);
+                                  return;
+                                }
+
+                                void handleOpenTabInCurrent(tab.url, folder.id);
+                              }}
+                              onAuxClick={(event) => {
+                                if (event.button !== 1) return;
                                 event.preventDefault();
                                 void handleOpenTabBesideCurrent(tab.url, folder.id);
-                                return;
-                              }
-
-                              void handleOpenTabInCurrent(tab.url, folder.id);
-                            }}
-                            onAuxClick={(event) => {
-                              if (event.button !== 1) return;
-                              event.preventDefault();
-                              void handleOpenTabBesideCurrent(tab.url, folder.id);
-                            }}
+                              }}
+                              disabled={busyFolderId === folder.id}
+                              title={tab.title}
+                            >
+                              {tab.title}
+                            </button>
+                          </div>
+                          <button
+                            className="ghost-button icon-action-button"
+                            onClick={() => void handleDeleteTab(folder, tab.id)}
                             disabled={busyFolderId === folder.id}
-                            title={tab.title}
+                            aria-label={messages.removeTabAria(tab.title)}
                           >
-                            {tab.title}
+                            <XIcon />
                           </button>
-                        </div>
-                        <button
-                          className="ghost-button icon-action-button"
-                          onClick={() => void handleDeleteTab(folder, tab.id)}
-                          disabled={busyFolderId === folder.id}
-                          aria-label={messages.removeTabAria(tab.title)}
-                        >
-                          <XIcon />
-                        </button>
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </li>
-            );
-          })}
-        </ul>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </li>
+              );
+            })}
+          </ul>
+        )}
 
         {hasMore && (
-          <button className="ghost-button more-button" onClick={() => setVisibleCount((count) => getNextVisibleFolderCount(count, folders.length))}>
+          <button className="ghost-button more-button" onClick={() => setVisibleCount((count) => getNextVisibleFolderCount(count, sessionFolders.length))}>
             {messages.loadMore}
           </button>
         )}

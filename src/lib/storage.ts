@@ -7,18 +7,60 @@ export type SavedTab = {
   favIconUrl?: string;
 };
 
-export type TabFolder = {
+type BaseTabFolder = {
   id: string;
   name: string;
   createdAt: string;
   updatedAt: string;
-  source: "current-window";
-  skippedCount: number;
-  duplicateCount?: number;
   tabs: SavedTab[];
 };
 
+export type SessionTabFolder = BaseTabFolder & {
+  kind: "session";
+  source: "current-window";
+  skippedCount: number;
+  duplicateCount?: number;
+};
+
+export type FavoriteTabFolder = BaseTabFolder & {
+  kind: "favorite";
+  source: "manual";
+  skippedCount: 0;
+  duplicateCount?: 0;
+};
+
+export type TabFolder = SessionTabFolder | FavoriteTabFolder;
+
 type ChromeTabSnapshot = Pick<chrome.tabs.Tab, "favIconUrl" | "title" | "url">;
+
+type FolderDateOptions = {
+  createId?: () => string;
+  now?: Date;
+};
+
+type FavoriteFolderAnalysis = {
+  additions: SavedTab[];
+  updates: SavedTab[];
+  skippedNonRestorableCount: number;
+  skippedSelectionDuplicateCount: number;
+  duplicateCount: number;
+};
+
+export type FavoriteFolderAddPreview = {
+  addableCount: number;
+  duplicateCount: number;
+  skippedNonRestorableCount: number;
+  skippedSelectionDuplicateCount: number;
+};
+
+export type AddTabsToFavoriteFolderResult = {
+  folders: TabFolder[];
+  addedCount: number;
+  updatedCount: number;
+  skippedDuplicateCount: number;
+  skippedNonRestorableCount: number;
+  skippedSelectionDuplicateCount: number;
+};
 
 export type StorageAreaLike = {
   get: (keys?: string | string[] | Record<string, unknown> | null) => Promise<Record<string, unknown>>;
@@ -27,6 +69,10 @@ export type StorageAreaLike = {
 
 function defaultStorageArea(): StorageAreaLike {
   return chrome.storage.local;
+}
+
+function isFolderKind(value: unknown): value is TabFolder["kind"] {
+  return value === "session" || value === "favorite";
 }
 
 function sortFolders(folders: TabFolder[]): TabFolder[] {
@@ -50,23 +96,75 @@ function isSavedTab(value: unknown): value is SavedTab {
   return typeof tab.id === "string" && typeof tab.title === "string" && typeof tab.url === "string";
 }
 
-function isTabFolder(value: unknown): value is TabFolder {
+export function isSessionFolder(folder: TabFolder): folder is SessionTabFolder {
+  return folder.kind === "session";
+}
+
+export function isFavoriteFolder(folder: TabFolder): folder is FavoriteTabFolder {
+  return folder.kind === "favorite";
+}
+
+function migrateStoredFolder(value: unknown): TabFolder | null {
   if (!value || typeof value !== "object") {
-    return false;
+    return null;
   }
 
-  const folder = value as Partial<TabFolder>;
-  return (
-    typeof folder.id === "string" &&
-    typeof folder.name === "string" &&
-    typeof folder.createdAt === "string" &&
-    typeof folder.updatedAt === "string" &&
-    folder.source === "current-window" &&
-    typeof folder.skippedCount === "number" &&
-    (typeof folder.duplicateCount === "undefined" || typeof folder.duplicateCount === "number") &&
-    Array.isArray(folder.tabs) &&
-    folder.tabs.every(isSavedTab)
-  );
+  const folder = value as Partial<TabFolder> & { kind?: unknown };
+  const kind = isFolderKind(folder.kind)
+    ? folder.kind
+    : folder.source === "manual"
+      ? "favorite"
+      : "session";
+
+  if (
+    typeof folder.id !== "string" ||
+    typeof folder.name !== "string" ||
+    typeof folder.createdAt !== "string" ||
+    typeof folder.updatedAt !== "string" ||
+    !Array.isArray(folder.tabs)
+  ) {
+    return null;
+  }
+
+  const restorableTabs = folder.tabs.filter(isSavedTab).filter((tab) => isRestorableUrl(tab.url));
+
+  if (kind === "favorite") {
+    return {
+      id: folder.id,
+      kind,
+      name: folder.name,
+      createdAt: folder.createdAt,
+      updatedAt: folder.updatedAt,
+      source: "manual",
+      skippedCount: 0,
+      tabs: restorableTabs
+    };
+  }
+
+  if (
+    folder.source !== "current-window" ||
+    typeof folder.skippedCount !== "number" ||
+    (typeof folder.duplicateCount !== "undefined" && typeof folder.duplicateCount !== "number") ||
+    restorableTabs.length === 0
+  ) {
+    return null;
+  }
+
+  return {
+    id: folder.id,
+    kind,
+    name: folder.name,
+    createdAt: folder.createdAt,
+    updatedAt: folder.updatedAt,
+    source: "current-window",
+    skippedCount: folder.skippedCount,
+    duplicateCount: folder.duplicateCount,
+    tabs: restorableTabs
+  };
+}
+
+function isTabFolder(value: unknown): value is TabFolder {
+  return migrateStoredFolder(value) !== null;
 }
 
 export function normalizeStoredFolders(value: unknown): TabFolder[] {
@@ -74,7 +172,11 @@ export function normalizeStoredFolders(value: unknown): TabFolder[] {
     return [];
   }
 
-  return sortFolders(value.filter(isTabFolder));
+  return sortFolders(value.flatMap((folder) => {
+    const migratedFolder = migrateStoredFolder(folder);
+
+    return migratedFolder ? [migratedFolder] : [];
+  }));
 }
 
 export function formatFolderTimestamp(date = new Date()): string {
@@ -119,11 +221,8 @@ export function getFolderSkipCounts(folder: TabFolder): {
 export function buildFolderFromTabs(
   tabs: ChromeTabSnapshot[],
   requestedName: string,
-  options?: {
-    createId?: () => string;
-    now?: Date;
-  }
-): TabFolder | null {
+  options?: FolderDateOptions
+): SessionTabFolder | null {
   const now = options?.now ?? new Date();
   const createId = options?.createId ?? (() => crypto.randomUUID());
   const folderId = createId();
@@ -160,6 +259,7 @@ export function buildFolderFromTabs(
 
   return {
     id: folderId,
+    kind: "session",
     name: normalizeFolderName(requestedName, formatFolderTimestamp(now)),
     createdAt: timestamp,
     updatedAt: timestamp,
@@ -167,6 +267,93 @@ export function buildFolderFromTabs(
     skippedCount: nonRestorableCount + duplicateCount,
     duplicateCount,
     tabs: restorableTabs
+  };
+}
+
+export function createFavoriteFolder(
+  requestedName: string,
+  options?: FolderDateOptions
+): FavoriteTabFolder {
+  const now = options?.now ?? new Date();
+  const createId = options?.createId ?? (() => crypto.randomUUID());
+  const timestamp = now.toISOString();
+
+  return {
+    id: createId(),
+    kind: "favorite",
+    name: normalizeFolderName(requestedName, formatFolderTimestamp(now)),
+    createdAt: timestamp,
+    updatedAt: timestamp,
+    source: "manual",
+    skippedCount: 0,
+    tabs: []
+  };
+}
+
+function buildSavedTab(tab: ChromeTabSnapshot, id: string): SavedTab {
+  return {
+    id,
+    title: tab.title?.trim() || tab.url || "",
+    url: tab.url ?? "",
+    favIconUrl: tab.favIconUrl || undefined
+  };
+}
+
+function analyzeFavoriteFolderTabs(
+  folder: FavoriteTabFolder,
+  tabs: ChromeTabSnapshot[],
+  createTabId: (index: number) => string
+): FavoriteFolderAnalysis {
+  const existingTabsByUrl = new Map(folder.tabs.map((tab) => [tab.url, tab]));
+  const seenSelectionUrls = new Set<string>();
+  const additions: SavedTab[] = [];
+  const updates: SavedTab[] = [];
+  let skippedNonRestorableCount = 0;
+  let skippedSelectionDuplicateCount = 0;
+
+  for (const tab of tabs) {
+    if (!isRestorableUrl(tab.url)) {
+      skippedNonRestorableCount += 1;
+      continue;
+    }
+
+    if (seenSelectionUrls.has(tab.url)) {
+      skippedSelectionDuplicateCount += 1;
+      continue;
+    }
+
+    seenSelectionUrls.add(tab.url);
+
+    const candidate = buildSavedTab(tab, createTabId(additions.length + updates.length));
+
+    if (existingTabsByUrl.has(candidate.url)) {
+      updates.push(candidate);
+      continue;
+    }
+
+    additions.push(candidate);
+  }
+
+  return {
+    additions,
+    updates,
+    skippedNonRestorableCount,
+    skippedSelectionDuplicateCount,
+    duplicateCount: updates.length
+  };
+}
+
+export function previewTabsForFavoriteFolder(
+  folder: FavoriteTabFolder,
+  tabs: ChromeTabSnapshot[]
+): FavoriteFolderAddPreview {
+  const analysis = analyzeFavoriteFolderTabs(folder, tabs, (index) => `${folder.id}:preview:${index}`);
+
+  return {
+    addableCount: analysis.additions.length,
+    duplicateCount: analysis.duplicateCount,
+    skippedNonRestorableCount: analysis.skippedNonRestorableCount,
+    skippedSelectionDuplicateCount: analysis.skippedSelectionDuplicateCount
   };
 }
 
@@ -194,6 +381,72 @@ export async function saveFolder(
   const folders = await getFolders(storageArea);
 
   return writeFolders([folder, ...folders.filter((existingFolder) => existingFolder.id !== folder.id)], storageArea);
+}
+
+export async function addTabsToFavoriteFolder(
+  folderId: string,
+  tabs: ChromeTabSnapshot[],
+  options?: {
+    overwriteDuplicates?: boolean;
+    storageArea?: StorageAreaLike;
+    now?: Date;
+    createTabId?: (index: number) => string;
+  }
+): Promise<AddTabsToFavoriteFolderResult> {
+  const storageArea = options?.storageArea ?? defaultStorageArea();
+  const now = options?.now ?? new Date();
+  const overwriteDuplicates = options?.overwriteDuplicates ?? false;
+  const folders = await getFolders(storageArea);
+  const targetFolder = folders.find((folder) => folder.id === folderId);
+
+  if (!targetFolder || !isFavoriteFolder(targetFolder)) {
+    throw new Error("즐겨찾기 폴더를 찾을 수 없습니다.");
+  }
+
+  const createTabId = options?.createTabId ?? ((index: number) => `${folderId}:${crypto.randomUUID()}:${index}`);
+  const analysis = analyzeFavoriteFolderTabs(targetFolder, tabs, createTabId);
+
+  const updatedTabsByUrl = new Map(analysis.updates.map((tab) => [tab.url, tab]));
+  const nextTabs = targetFolder.tabs.flatMap((tab) => {
+    const replacement = updatedTabsByUrl.get(tab.url);
+
+    if (!replacement || !overwriteDuplicates) {
+      return [tab];
+    }
+
+    return [
+      {
+        ...tab,
+        title: replacement.title,
+        favIconUrl: replacement.favIconUrl
+      }
+    ];
+  });
+
+  const appliedUpdates = overwriteDuplicates ? analysis.updates.length : 0;
+  const nextFolder =
+    analysis.additions.length > 0 || appliedUpdates > 0
+      ? {
+          ...targetFolder,
+          tabs: [...nextTabs, ...analysis.additions],
+          updatedAt: now.toISOString()
+        }
+      : targetFolder;
+
+  const nextFolders = folders.map((folder) => (folder.id === folderId ? nextFolder : folder));
+  const storedFolders =
+    nextFolder === targetFolder
+      ? folders
+      : await writeFolders(nextFolders, storageArea);
+
+  return {
+    folders: storedFolders,
+    addedCount: analysis.additions.length,
+    updatedCount: appliedUpdates,
+    skippedDuplicateCount: overwriteDuplicates ? 0 : analysis.duplicateCount,
+    skippedNonRestorableCount: analysis.skippedNonRestorableCount,
+    skippedSelectionDuplicateCount: analysis.skippedSelectionDuplicateCount
+  };
 }
 
 export async function renameFolder(
