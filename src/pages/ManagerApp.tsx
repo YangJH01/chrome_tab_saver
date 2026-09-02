@@ -1,6 +1,12 @@
-import { type KeyboardEvent, useEffect, useRef, useState } from "react";
+import { type ChangeEvent, type KeyboardEvent, useEffect, useRef, useState } from "react";
 
 import { UndoCountdownRing } from "../components/UndoCountdownRing";
+import {
+  createTabSaveBackup,
+  importTabSaveBackup,
+  parseTabSaveBackup,
+  serializeTabSaveBackup
+} from "../lib/backup";
 import {
   getLanguageLabel,
   getMessages,
@@ -137,6 +143,8 @@ export function ManagerApp() {
   const [pickerError, setPickerError] = useState<string | null>(null);
   const [pickerBusy, setPickerBusy] = useState(false);
   const [duplicateResolution, setDuplicateResolution] = useState<DuplicateResolutionState | null>(null);
+  const [backupBusy, setBackupBusy] = useState(false);
+  const backupInputRef = useRef<HTMLInputElement>(null);
   const undoTimerRef = useRef<number | null>(null);
   const previousDefaultRestoreModeRef = useRef(settings.defaultRestoreMode);
 
@@ -522,6 +530,85 @@ export function ManagerApp() {
     } catch (caughtError) {
       console.error(caughtError);
       setError(messages.favoriteTabsBehaviorFailed);
+    }
+  }
+
+  async function handleExportBackup() {
+    setBackupBusy(true);
+    setFeedback(null);
+    setError(null);
+
+    try {
+      const backup = await createTabSaveBackup();
+      const blob = new Blob([serializeTabSaveBackup(backup)], { type: "application/json" });
+      const downloadUrl = URL.createObjectURL(blob);
+      const anchor = document.createElement("a");
+
+      try {
+        anchor.href = downloadUrl;
+        anchor.download = `tab-save-backup-${backup.exportedAt.slice(0, 10)}.json`;
+        anchor.click();
+      } finally {
+        URL.revokeObjectURL(downloadUrl);
+      }
+
+      setSettingsOpen(false);
+      setFeedback(messages.backupExportSuccess);
+    } catch (caughtError) {
+      console.error(caughtError);
+      setSettingsOpen(false);
+      setError(messages.backupExportFailed);
+    } finally {
+      setBackupBusy(false);
+    }
+  }
+
+  async function handleImportBackupFile(event: ChangeEvent<HTMLInputElement>) {
+    const input = event.currentTarget;
+    const file = input.files?.[0];
+
+    if (!file) {
+      return;
+    }
+
+    setBackupBusy(true);
+    setFeedback(null);
+    setError(null);
+
+    try {
+      const backup = parseTabSaveBackup(await file.text());
+      const tabCount = backup.folders.reduce((count, folder) => count + folder.tabs.length, 0);
+
+      setSettingsOpen(false);
+      openConfirm(
+        messages.backupImportConfirmTitle,
+        messages.backupImportConfirm(backup.folders.length, tabCount),
+        messages.backupImportConfirmAction,
+        "primary",
+        async () => {
+          setBackupBusy(true);
+          setFeedback(null);
+          setError(null);
+
+          try {
+            await importTabSaveBackup(backup);
+            await refresh();
+            setFeedback(messages.backupImportSuccess(backup.folders.length, tabCount));
+          } catch (caughtError) {
+            console.error(caughtError);
+            setError(messages.backupImportFailed);
+          } finally {
+            setBackupBusy(false);
+          }
+        }
+      );
+    } catch (caughtError) {
+      console.error(caughtError);
+      setSettingsOpen(false);
+      setError(messages.backupImportInvalid);
+    } finally {
+      input.value = "";
+      setBackupBusy(false);
     }
   }
 
@@ -1116,6 +1203,36 @@ export function ManagerApp() {
                   </span>
                   <small>{messages.languageEnglishDescription}</small>
                 </button>
+              </div>
+            </section>
+
+            <section className="settings-section">
+              <div className="settings-copy">
+                <strong>{messages.backupTitle}</strong>
+                <p>{messages.backupDescription}</p>
+              </div>
+              <div className="backup-actions">
+                <button
+                  className="secondary-button"
+                  onClick={() => void handleExportBackup()}
+                  disabled={backupBusy}
+                >
+                  {messages.backupExport}
+                </button>
+                <button
+                  className="primary-button"
+                  onClick={() => backupInputRef.current?.click()}
+                  disabled={backupBusy}
+                >
+                  {messages.backupImport}
+                </button>
+                <input
+                  ref={backupInputRef}
+                  type="file"
+                  accept="application/json,.json"
+                  hidden
+                  onChange={(event) => void handleImportBackupFile(event)}
+                />
               </div>
             </section>
           </div>

@@ -3,7 +3,7 @@ import { defineManifest } from "@crxjs/vite-plugin";
 export default defineManifest({
   manifest_version: 3,
   name: "Tab Save",
-  version: "0.1.0",
+  version: "0.1.1",
   description: "현재 창 탭을 폴더처럼 저장하고 새 창으로 다시 여는 크롬 확장입니다.",
   action: {
     default_popup: "popup.html",

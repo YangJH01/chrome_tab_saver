@@ -87,6 +87,18 @@ type TranslationDictionary = {
   favoriteTabsCloseDescription: string;
   favoriteTabsBehaviorSaved: (label: string) => string;
   favoriteTabsBehaviorFailed: string;
+  backupTitle: string;
+  backupDescription: string;
+  backupExport: string;
+  backupImport: string;
+  backupExportSuccess: string;
+  backupExportFailed: string;
+  backupImportConfirmTitle: string;
+  backupImportConfirm: (folderCount: number, tabCount: number) => string;
+  backupImportConfirmAction: string;
+  backupImportSuccess: (folderCount: number, tabCount: number) => string;
+  backupImportFailed: string;
+  backupImportInvalid: string;
   settingsLoadFailed: string;
   foldersLoadFailed: string;
   favoriteFoldersKicker: string;
@@ -219,6 +231,18 @@ const translations: Record<LanguageCode, TranslationDictionary> = {
     favoriteTabsCloseDescription: "선택해서 추가한 탭만 현재 창에서 닫습니다.",
     favoriteTabsBehaviorSaved: (label) => `즐겨찾기 탭 추가 후 처리가 ${label}로 설정되었습니다.`,
     favoriteTabsBehaviorFailed: "즐겨찾기 탭 추가 후 처리 설정을 저장하지 못했습니다.",
+    backupTitle: "데이터 백업",
+    backupDescription: "저장한 폴더와 앱 설정을 JSON 파일로 옮기거나 복구합니다. 불러오면 현재 데이터가 교체됩니다.",
+    backupExport: "백업 파일 내보내기",
+    backupImport: "백업 파일 불러오기",
+    backupExportSuccess: "백업 파일을 내보냈습니다.",
+    backupExportFailed: "백업 파일을 만들지 못했습니다.",
+    backupImportConfirmTitle: "백업 불러오기",
+    backupImportConfirm: (folderCount, tabCount) => `폴더 ${folderCount}개와 탭 ${tabCount}개, 앱 설정으로 현재 데이터를 교체할까요?`,
+    backupImportConfirmAction: "교체하고 불러오기",
+    backupImportSuccess: (folderCount, tabCount) => `폴더 ${folderCount}개와 탭 ${tabCount}개를 불러왔습니다.`,
+    backupImportFailed: "백업 데이터를 저장하지 못했습니다.",
+    backupImportInvalid: "올바른 Tab Save 백업 파일이 아닙니다.",
     settingsLoadFailed: "전역 설정을 불러오지 못했습니다.",
     foldersLoadFailed: "저장된 탭 폴더를 불러오지 못했습니다.",
     favoriteFoldersKicker: "Favorite Folders",
@@ -363,6 +387,18 @@ const translations: Record<LanguageCode, TranslationDictionary> = {
     favoriteTabsCloseDescription: "Close only the tabs you just added from the current window.",
     favoriteTabsBehaviorSaved: (label) => `Favorite tab behavior saved as ${label}.`,
     favoriteTabsBehaviorFailed: "Failed to save the favorite tab behavior.",
+    backupTitle: "Data backup",
+    backupDescription: "Move or restore saved folders and app settings with a JSON file. Importing replaces the current data.",
+    backupExport: "Export backup file",
+    backupImport: "Import backup file",
+    backupExportSuccess: "Exported the backup file.",
+    backupExportFailed: "Failed to create the backup file.",
+    backupImportConfirmTitle: "Import backup",
+    backupImportConfirm: (folderCount, tabCount) => `Replace the current data with ${folderCount} folder${folderCount === 1 ? "" : "s"}, ${tabCount} tab${tabCount === 1 ? "" : "s"}, and the imported app settings?`,
+    backupImportConfirmAction: "Replace and import",
+    backupImportSuccess: (folderCount, tabCount) => `Imported ${folderCount} folder${folderCount === 1 ? "" : "s"} and ${tabCount} tab${tabCount === 1 ? "" : "s"}.`,
+    backupImportFailed: "Failed to save the imported backup.",
+    backupImportInvalid: "This is not a valid Tab Save backup file.",
     settingsLoadFailed: "Failed to load global settings.",
     foldersLoadFailed: "Failed to load saved tab folders.",
     favoriteFoldersKicker: "Favorite Folders",
